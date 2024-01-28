@@ -5,7 +5,7 @@ import { Circle, Marker, Popup } from 'react-leaflet';
 export default function MarkerComponent(props: {
   position: LatLngExpression,
   type: string,
-  popUp?: string,
+  name?: string,
   children?: ReactNode;
 }) {
 
@@ -28,7 +28,7 @@ export default function MarkerComponent(props: {
     iconSize: [40, 40]
    })
 
-   const renderIcon = (type: string, position: LatLngExpression) => {
+   const renderIcon = (type: string) => {
     switch(type) {
       case 'myLocation':
         return (        
@@ -36,7 +36,7 @@ export default function MarkerComponent(props: {
           position={props.position} 
           icon={myLocationIcon}>
             <Popup>
-              {props?.popUp}
+              {props?.name}
             </Popup>
         </Marker>)
       case 'user':
@@ -47,7 +47,7 @@ export default function MarkerComponent(props: {
           fillColor="blue"
           radius={200}>
             <Popup>
-              {props?.popUp}
+              {props?.name}
             </Popup>
           </Circle>)
       case 'shop':
@@ -56,7 +56,7 @@ export default function MarkerComponent(props: {
           position={props.position} 
           icon={pointIcon}>
             <Popup>
-              {props?.popUp}
+              {props?.name}
             </Popup>
         </Marker>)
         default:
@@ -65,7 +65,7 @@ export default function MarkerComponent(props: {
               position={props.position} 
               icon={questionIcon}>
                 <Popup>
-                  {props?.popUp}
+                  {props?.name}
                 </Popup>
             </Marker>)
     }
@@ -73,7 +73,7 @@ export default function MarkerComponent(props: {
 
   return (
     <div>
-      {props.type && props.position && renderIcon(type, position)}
+      {props.type && props.position && renderIcon(type)}
     </div>
   )
 }

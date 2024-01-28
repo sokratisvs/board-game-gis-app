@@ -12,7 +12,7 @@ export default function MapComponent() {
             lat: 37.942127583678776, 
             lng: 23.714480156086637
         },
-        popup: 'Serena Rodriguez',
+        name: 'Serena Rodriguez',
         type: 'user'
     },
     {
@@ -20,7 +20,7 @@ export default function MapComponent() {
             lat: 37.987086035192384, 
             lng: 23.726866021570746
         },
-        popup: 'Maya Patel',
+        name: 'Maya Patel',
         type: 'user'
     },
     {
@@ -28,7 +28,7 @@ export default function MapComponent() {
             lat: 37.9335636650263, 
             lng: 23.755277420683132
         },
-        popup: 'Isaac Ramirez',
+        name: 'Isaac Ramirez',
         type: 'user' // user, shop, event
     },
     {
@@ -36,7 +36,7 @@ export default function MapComponent() {
             lat: 37.957637371954576,  
             lng: 23.72953503331404
         },
-        popup: 'Lambda Project',
+        name: 'Lambda Project',
         type: 'shop' // user, shop, event
     },
     {
@@ -44,7 +44,7 @@ export default function MapComponent() {
             lat: 37.959311695128626,  
             lng: 23.706172718146803
         },
-        popup: '',
+        name: '',
         type: '' // user, shop, event
     }
   ]
@@ -67,7 +67,7 @@ export default function MapComponent() {
                 key={index}
                 position={[marker.coordinates.lat, marker.coordinates.lng]}
                 type={marker.type}
-                popUp={marker.popup} />
+                name={marker.name} />
             ))
             }
             <MyLocation />

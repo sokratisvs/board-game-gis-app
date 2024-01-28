@@ -21,7 +21,7 @@ export default function MyLocation() {
     }, [map]);
 
     return myCoordinates && (
-        <LocationMarker position={myCoordinates} type="myLocation">
+        <LocationMarker position={myCoordinates} type="myLocation" name="My location">
           {/* <Marker 
             position={myCoordinates} 
             icon={myIcon}> */}
