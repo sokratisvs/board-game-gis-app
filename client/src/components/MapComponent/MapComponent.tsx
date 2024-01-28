@@ -1,50 +1,57 @@
-import { Icon } from 'leaflet';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import LocationMarker from '../LocationMarker/LocationMarker';
+import MyLocation from '../MyLocation/MyLocation';
 import './MapComponent.css';
 
 export default function MapComponent() {
-//   const mapRef = useRef();
-//   const [bounds, setbounds] = useState([
-//     [-90, -180],
-//     [90, 180],
-//   ]);
-  const position = [51.505, -0.09]
+
   const markers = [
     {
-        location: {
-            latitude: 40.51906594602173, 
-            longitude: 21.679130381253447
+        coordinates: {
+            lat: 37.942127583678776, 
+            lng: 23.714480156086637
         },
-        popup: 'Serena Rodriguez'
+        popup: 'Serena Rodriguez',
+        type: 'user'
     },
     {
-        location: {
-            latitude: 40.50548855025817, 
-            longitude: 21.672340660174335
+      coordinates: {
+            lat: 37.987086035192384, 
+            lng: 23.726866021570746
         },
-        popup: 'Maya Patel'
+        popup: 'Maya Patel',
+        type: 'user'
     },
     {
-        location: {
-            latitude: 40.51114361383287, 
-            longitude:21.66786604790538
+      coordinates: {
+            lat: 37.9335636650263, 
+            lng: 23.755277420683132
         },
-        popup: 'Isaac Ramirez'
+        popup: 'Isaac Ramirez',
+        type: 'user' // user, shop, event
+    },
+    {
+      coordinates: {
+            lat: 37.957637371954576,  
+            lng: 23.72953503331404
+        },
+        popup: 'Lambda Project',
+        type: 'shop' // user, shop, event
+    },
+    {
+      coordinates: {
+            lat: 37.959311695128626,  
+            lng: 23.706172718146803
+        },
+        popup: '',
+        type: '' // user, shop, event
     }
   ]
- 
-  const myIcon = new Icon({
-    className: 'marker',
-    // iconUrl: 'https://cdn-icons-png.flaticon.com/512/5616/5616461.png',
-    iconUrl: require('../../assets/icons/marker-icon.png'),
-    iconSize: [38, 38]
-   })
-
 
   return (
-    <MapContainer 
-        center={[40.51158785749875, 21.6792781663114]}
+    <MapContainer
+        center={[40.51906594602173, 21.679130381253447]}
         zoom={15}
         maxZoom={19}
         minZoom={2}
@@ -55,16 +62,15 @@ export default function MapComponent() {
               noWrap={false}
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            {markers.map(marker => (
-                <Marker 
-                    position={[marker.location.latitude,  marker.location.longitude]} 
-                    icon={myIcon}>
-                      <Popup>
-                        {marker?.popup}
-                      </Popup>
-            </Marker>
+            {markers.map((marker, index) => (
+                <LocationMarker 
+                key={index}
+                position={[marker.coordinates.lat, marker.coordinates.lng]}
+                type={marker.type}
+                popUp={marker.popup} />
             ))
             }
+            <MyLocation />
         {/* <LayersControl position="topright">
           <LayersControl.BaseLayer name="OpenStreet">
             <TileLayer
