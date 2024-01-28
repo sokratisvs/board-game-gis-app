@@ -1,11 +1,24 @@
-import React from 'react';
-import logo from './logo.svg';
+import { useContext } from 'react';
+// import MapComponent from './components/MapComponent/MapComponent';
+import { AuthContext } from './context/Auth.context';
+import Login from './components/Login/Login';
 import './App.css';
+import Main from './components/Main/Main';
 
-function App() {
+const App = () => {
+  const { isLoggedIn } = useContext(AuthContext);
+
+  const render = () => {
+    if (!isLoggedIn) 
+    return <Login />;
+  else
+    return <Main />;
+  }
+  
+
   return (
     <div className="App">
-      <h1>Hello World</h1>
+        {render()}
     </div>
   );
 }
