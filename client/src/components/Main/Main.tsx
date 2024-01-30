@@ -1,12 +1,17 @@
 import { useContext } from 'react';
 
 import { AuthContext } from '../../context/Auth.context';
+import { useNavigate } from 'react-router-dom';
 
 const Main = () => {
   const { logout } = useContext(AuthContext);
+  const navigate = useNavigate();
+
   const onLogout = (e: { preventDefault: () => void; }) => {
     e.preventDefault();
-    logout();
+    logout(() => {
+          navigate('/login')
+    });
   }
 
   return (

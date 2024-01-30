@@ -3,24 +3,26 @@ import { AuthContext } from '../../context/Auth.context';
 import { useNavigate } from 'react-router-dom';
 
 const initialState = {
+    name: '',
     email: '',
     password: '',
   }
 
-export default function Login() {
-  const { isLoggedIn, loginPending, loginError, login } = useContext(AuthContext);
+export default function Register() {
+  const { isLoggedIn, loginPending, loginError, register } = useContext(AuthContext);
   const [state, setState] = useState(initialState);
   const navigate = useNavigate();
 
   const onSubmit = (e: { preventDefault: () => void; }) => {
     e.preventDefault();
-    const { email, password } = state;
-    login(email, password, (error: any) => {
-      if (!error) {
-          navigate('/')
-      }
-  });
+    const { name, email, password } = state;
+    register(name, email, password, (error: any) => {
+        if (!error) {
+            navigate('/login')
+        }
+    });
     setState({
+      name: '',
       email: '',
       password: ''
     });
@@ -51,8 +53,16 @@ export default function Login() {
     <form name="loginForm">
         <div className="row">
 
-        <div className="col-sm-3 col-md-6">
-        
+        <div className="form-outline mb-4">
+        <label className="form-label" htmlFor="email">Full Name</label>
+        <input 
+            className="form-control"
+            type="text" 
+            name="name" 
+            onChange={e => setState((prev) => ({...prev, name: e.target.value}))} 
+            value={state.name} 
+            placeholder="email" 
+        />
         </div>
 
         <div className="form-outline mb-4">
@@ -81,11 +91,11 @@ export default function Login() {
             
 
         <button type="submit" className="btn btn-primary btn-block mb-4" onClick={onSubmit}>
-                  Sign In
+                  Sign Up
                 </button>
 
         <div className="text-center">
-                  <p>Don't have an account yet? <a href="/register">Register</a></p>
+        <p>Already have an account? <a href="/login">Login</a></p>
                 
                 </div>
 

@@ -1,15 +1,14 @@
-import { LatLngExpression } from 'leaflet';
+// import { LatLngExpression } from 'leaflet';    // TODO install leaflet 
 import { PropsWithChildren, createContext, useState } from 'react';
 
 type UserStateType = {
-    coordinates: LatLngExpression,
+    // coordinates: LatLngExpression,
     type: 'myLocation'
 } | undefined;
 
 type LoginErrorType = {
     message: 'string'
 } | undefined;
-
 
 const initialState = {
     user: {} as any,
@@ -20,20 +19,12 @@ const initialState = {
     setIsLoggedIn: (value: boolean) => {},
     setLoginPending: (value: boolean) => {},
     setLoginError: (error: LoginErrorType) => {},
-    login: (email: string, password: string) => {},
-    logout: () => {},
+    register: (name: string, email: string, password: string, callback: Function) => {},
+    login: (email: string, password: string, callback: Function) => {},
+    logout: (callback: Function) => {},
   }
 
 export const AuthContext = createContext(initialState);
-  // TODO fetch user from endpoint
-  const fetchLogin = (email: string, password: string, callback: Function) => 
-  setTimeout(() => {
-    if (email === 'admin' && password === 'admin') {
-      return callback(null);
-    } else {
-      return callback(new Error('Invalid email and password'));
-    }
-  }, 1000);
 
   export const AuthContextProvider = ({ children }: PropsWithChildren<{}>) => {
     const [user, setUser] = useState<UserStateType>(undefined);
@@ -41,32 +32,52 @@ export const AuthContext = createContext(initialState);
     const [loginPending, setLoginPending] = useState(false);
     const [loginError, setLoginError] = useState<LoginErrorType>(undefined);
   
-    const login = (email: string, password: string) => {
+    const login = (email: string, password: string, callback: Function) => {
       setLoginPending(true);
       setUser(undefined);
       setLoginError(undefined);
-  
-      fetchLogin(email, password, (error: any) => {
-        setLoginPending(false);
-  
-        if (!error) {
-            setIsLoggedIn(true)
-            // TODO setUser from endpoint
+
+      try {
+        // TODO login User from endpoint
             // setUser({
             //     // coordinates: [],
             //     type: 'myLocation'
             // });
-        } else {
-          setLoginError(error);
-        }
-      })
+        setLoginPending(false);
+        setIsLoggedIn(true)
+        return callback(null);
+      } catch(error: any) {
+        setLoginPending(false);
+        setLoginError(error)
+        return callback(error);
+      }
+      }
+
+    const register = (name: string, email: string, password: string, callback: Function) => {
+      setLoginPending(true);
+      setLoginError(undefined);
+
+      try {
+        // TODO register User from endpoint
+            // setUser({
+            //     // coordinates: [],
+            //     type: 'myLocation'
+            // });
+        setLoginPending(false);
+        return callback(null);
+      } catch(error: any) {
+        setLoginPending(false);
+        setLoginError(error)
+        return callback(error);
+      }
     }
   
-    const logout = () => {
+    const logout = (callback: Function) => {
       setLoginPending(false);
       setIsLoggedIn(false)
       setUser(undefined);
       setLoginError(undefined);
+      return callback(null);
     }
   
     return (
@@ -81,6 +92,7 @@ export const AuthContext = createContext(initialState);
             loginError, 
             setLoginError,
             login,
+            register,
             logout,
         }}
       >
