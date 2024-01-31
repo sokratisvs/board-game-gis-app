@@ -1,7 +1,9 @@
 // import { LatLngExpression } from 'leaflet';    // TODO install leaflet 
 import { PropsWithChildren, createContext, useState } from 'react';
+import axios from 'axios';
 
 type UserStateType = {
+  username: string,
     // coordinates: LatLngExpression,
     type: 'myLocation'
 } | undefined;
@@ -32,17 +34,24 @@ export const AuthContext = createContext(initialState);
     const [loginPending, setLoginPending] = useState(false);
     const [loginError, setLoginError] = useState<LoginErrorType>(undefined);
   
-    const login = (email: string, password: string, callback: Function) => {
+    const login = async (email: string, password: string, callback: Function) => {
       setLoginPending(true);
       setUser(undefined);
       setLoginError(undefined);
 
       try {
-        // TODO login User from endpoint
-            // setUser({
-            //     // coordinates: [],
-            //     type: 'myLocation'
-            // });
+
+        const response = await axios.post('http://localhost:5000/login', {
+          email,
+          password
+        });
+
+        const { username, id } = response?.data || {}
+            setUser({
+              username,
+                // coordinates: [],
+                type: 'myLocation'
+            });
         setLoginPending(false);
         setIsLoggedIn(true)
         return callback(null);
@@ -53,16 +62,17 @@ export const AuthContext = createContext(initialState);
       }
       }
 
-    const register = (name: string, email: string, password: string, callback: Function) => {
+    const register = async (name: string, email: string, password: string, callback: Function) => {
       setLoginPending(true);
       setLoginError(undefined);
 
       try {
-        // TODO register User from endpoint
-            // setUser({
-            //     // coordinates: [],
-            //     type: 'myLocation'
-            // });
+        await axios.post('http://localhost:5000/register', {
+          username: name,
+          email,
+          password
+        });
+
         setLoginPending(false);
         return callback(null);
       } catch(error: any) {

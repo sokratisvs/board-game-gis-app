@@ -54,14 +54,14 @@ export default function Register() {
         <div className="row">
 
         <div className="form-outline mb-4">
-        <label className="form-label" htmlFor="email">Full Name</label>
+        <label className="form-label" htmlFor="username">Full Name</label>
         <input 
             className="form-control"
             type="text" 
             name="name" 
             onChange={e => setState((prev) => ({...prev, name: e.target.value}))} 
             value={state.name} 
-            placeholder="email" 
+            placeholder="username" 
         />
         </div>
 

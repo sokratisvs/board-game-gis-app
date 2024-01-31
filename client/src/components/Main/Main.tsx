@@ -4,7 +4,7 @@ import { AuthContext } from '../../context/Auth.context';
 import { useNavigate } from 'react-router-dom';
 
 const Main = () => {
-  const { logout } = useContext(AuthContext);
+  const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const onLogout = (e: { preventDefault: () => void; }) => {
@@ -19,7 +19,7 @@ const Main = () => {
 
       <div className="col-sm-8">
         <h1>
-          Hello Admin
+          Hello {user?.username || 'User'}
         </h1>
       </div>
 
