@@ -5,7 +5,10 @@ const cors = require('cors')
 const bodyParser = require('body-parser')
 const { Pool } = require('pg')
 const dotenv = require('dotenv')
+const session = require('express-session')
+
 dotenv.config({ path: '../.env' })
+const authRoutes = require('./routes/auth')
 const usersRoutes = require('./routes/users')
 const locationRoutes = require('./routes/location')
 
@@ -15,6 +18,20 @@ app.use(express.json())
 app.use(
   bodyParser.urlencoded({
     extended: true,
+  })
+)
+app.use(
+  session({
+    secret: process.env.COOKIE_SECRET,
+    credencials: true,
+    name: 'sid',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.ENVIRONMENT === 'production',
+      httpOnly: true,
+      sameSite: process.env.ENVIRONMENT === 'production' ? 'none' : 'lax',
+    },
   })
 )
 
@@ -29,22 +46,9 @@ let pool = new Pool({
 })
 
 app.set('pool', pool)
+app.use('/', authRoutes)
 app.use('/', usersRoutes)
 app.use('/', locationRoutes)
-
-const textQuery =
-  'SELECT ST_AsGeoJSON(geom) FROM geomtable ORDER BY gid DESC LIMIT 1'
-//Selecting the geometry in a geojson format
-app.get('/geom', async (req, res) => {
-  try {
-    // client.connect()
-    const geom = await pool.query(textQuery)
-    res.json(geom.rows)
-  } catch (err) {
-    console.error(err.message)
-  }
-  //   await client.end()
-})
 
 app.get('/', (request, response) => {
   response.json({ info: 'Node.js, Express, and Postgres API' })
