@@ -50,10 +50,6 @@ app.use('/', authRoutes)
 app.use('/', usersRoutes)
 app.use('/', locationRoutes)
 
-app.get('/', (request, response) => {
-  response.json({ info: 'Node.js, Express, and Postgres API' })
-})
-
 app.listen(PORT, () => {
   console.log('server is running on port 5000')
 })
