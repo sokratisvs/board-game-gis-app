@@ -32,22 +32,30 @@ app.set('pool', pool)
 app.use('/', usersRoutes)
 app.use('/', locationRoutes)
 
-const textQuery =
-  'SELECT ST_AsGeoJSON(geom) FROM geomtable ORDER BY gid DESC LIMIT 1'
-//Selecting the geometry in a geojson format
-app.get('/geom', async (req, res) => {
-  try {
-    // client.connect()
-    const geom = await pool.query(textQuery)
-    res.json(geom.rows)
-  } catch (err) {
-    console.error(err.message)
-  }
-  //   await client.end()
-})
+// const textQuery =
+//   'SELECT ST_AsGeoJSON(geom) FROM geomtable ORDER BY gid DESC LIMIT 1'
+// //Selecting the geometry in a geojson format
+// app.get('/geom', async (req, res) => {
+//   try {
+//     // client.connect()
+//     const geom = await pool.query(textQuery)
+//     res.json(geom.rows)
+//   } catch (err) {
+//     console.error(err.message)
+//   }
+//   //   await client.end()
+// })
 
 app.get('/', (request, response) => {
   response.json({ info: 'Node.js, Express, and Postgres API' })
+})
+
+app.get('/login', (request, response) => {
+  console.log('login!!!!')
+})
+
+app.post('/register', (request, response) => {
+  console.log('register---')
 })
 
 app.listen(PORT, () => {
