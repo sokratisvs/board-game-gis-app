@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-
+import MapComponent from '../MapComponent/MapComponent';
 import { AuthContext } from '../../context/Auth.context';
 import { useNavigate } from 'react-router-dom';
 
@@ -10,7 +10,7 @@ const Main = () => {
   const onLogout = (e: { preventDefault: () => void; }) => {
     e.preventDefault();
     logout(() => {
-          navigate('/login')
+      navigate('/login')
     });
   }
 
@@ -21,6 +21,7 @@ const Main = () => {
         <h1>
           Hello {user?.username || 'User'}
         </h1>
+        <MapComponent />
       </div>
 
       <div className="col-sm-4">
