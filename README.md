@@ -70,7 +70,8 @@ Check your environment that supports at least node v18 and above
    ```js
    DB_NAME = '<name-of-database>'
    DB_USER = '<admin-user>'
-   DB_PASSWORD = '<databse-password>'
+   DB_PASSWORD = '<database-password>'
+   COOKIE_SECRET='<cookie-secret-string>'
    ```
 3. Using docker to create new postgres database under the command
    ```sh
