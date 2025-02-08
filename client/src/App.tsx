@@ -1,4 +1,3 @@
-// import MapComponent from './components/MapComponent/MapComponent';
 import Layout from './components/Layout/Layout';
 import Login from './components/Login/Login';
 import Register from './components/Register/Register';
@@ -25,7 +24,7 @@ const App = () => {
 
   return (
     <div className="App">
-      <RouterProvider router={router} />     
+      <RouterProvider router={router} />
     </div>
 
   );
