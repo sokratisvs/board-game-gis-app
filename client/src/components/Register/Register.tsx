@@ -6,25 +6,33 @@ const initialState = {
   name: '',
   email: '',
   password: '',
+  type: ''
 }
+
+const userTypes = ['user', 'shop', 'event', 'admin'];
 
 export default function Register() {
   const { isLoggedIn, loginPending, loginError, register } = useContext(AuthContext);
   const [state, setState] = useState(initialState);
   const navigate = useNavigate();
 
+  const handleTypeChange = (e: { target: { value: any; }; }) => {
+    setState((prev) => ({ ...prev, type: e.target.value }));
+  };
+
   const onSubmit = (e: { preventDefault: () => void; }) => {
     e.preventDefault();
-    const { name, email, password } = state;
+    const { name, email, password, type } = state;
     register(name, email, password, (error: any) => {
       if (!error) {
         navigate('/login')
       }
-    });
+    }, type);
     setState({
       name: '',
       email: '',
-      password: ''
+      password: '',
+      type: ''
     });
   }
 
@@ -87,6 +95,23 @@ export default function Register() {
                       value={state.password}
                       placeholder="password"
                     />
+                  </div>
+
+                  <div className="form-outline mb-4">
+                    <label className="form-label" htmlFor="userType">Select User Type</label>
+                    <select
+                      id="userType"
+                      className="form-control"
+                      value={state.type}
+                      onChange={handleTypeChange}
+                    >
+                      <option value="">-- Select Type --</option>
+                      {userTypes.map((type) => (
+                        <option key={type} value={type}>
+                          {type.charAt(0).toUpperCase() + type.slice(1)}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
 
