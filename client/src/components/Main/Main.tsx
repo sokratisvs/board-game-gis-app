@@ -2,6 +2,7 @@ import { useContext } from 'react';
 import MapComponent from '../MapComponent/MapComponent';
 import { AuthContext } from '../../context/Auth.context';
 import { useNavigate } from 'react-router-dom';
+import UpdateLocationComponent from '../UpdateLocation/UpdateLocation';
 
 const Main = () => {
   const { user, logout } = useContext(AuthContext);
@@ -27,6 +28,7 @@ const Main = () => {
       <div className="col-sm-4">
         <h1>
           <button onClick={onLogout}>Logout</button>
+          <UpdateLocationComponent />
         </h1>
       </div>
     </div>

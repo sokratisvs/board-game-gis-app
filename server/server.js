@@ -9,8 +9,9 @@ const session = require('express-session')
 
 dotenv.config({ path: '../.env' })
 const authRoutes = require('./routes/auth')
-const usersRoutes = require('./routes/users')
+const userRoutes = require('./routes/user')
 const locationRoutes = require('./routes/location')
+const usersRoutes = require('./routes/users')
 
 //middleware
 app.use(cors())
@@ -47,8 +48,9 @@ let pool = new Pool({
 
 app.set('pool', pool)
 app.use('/', authRoutes)
-app.use('/', usersRoutes)
+app.use('/', userRoutes)
 app.use('/', locationRoutes)
+app.use('/', usersRoutes)
 
 app.listen(PORT, () => {
   console.log('server is running on port 5000')

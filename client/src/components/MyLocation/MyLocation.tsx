@@ -1,10 +1,17 @@
 import L, { LatLngExpression } from 'leaflet';
 import { useContext, useEffect, useState } from 'react'
 import { Popup, useMap } from 'react-leaflet';
+import { useUsers } from '../../context/Users.context';
 import LocationMarker from '../LocationMarker/LocationMarker';
+import { LocationContext } from '../../context/Location.context';
+import { AuthContext } from '../../context/Auth.context';
 
 export default function MyLocation() {
+    const { user } = useContext(AuthContext);
     const [myCoordinates, setMyCoordinates] = useState<LatLngExpression>([0, 0]);
+    const { location, getLocation, saveLocation } = useContext(LocationContext);
+    const { fetchUsersNearby } = useUsers();
+    const [radius, setRadius] = useState(50000);
     // const [bbox, setBbox] = useState([]);
 
     const map = useMap();
@@ -17,8 +24,10 @@ export default function MyLocation() {
             const circle = L.circle(e.latlng, radius);
             circle.addTo(map);
             // setBbox(e?.bounds.toBBoxString().split(","));
+            saveLocation(user.userId, e.latlng);
+            fetchUsersNearby(e.latlng, radius);
         });
-    }, [map]);
+    }, []);
 
     return myCoordinates && (
         <LocationMarker position={myCoordinates} type="myLocation" name="My location">

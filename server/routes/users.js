@@ -1,77 +1,171 @@
-const express = require('express')
-const router = express.Router()
+const express = require('express');
+const router = express.Router();
 
-router.get('/users', (request, response) => {
-  const pool = request.app.get('pool')
-  pool.query('SELECT * FROM users ORDER BY user_id ASC', (error, results) => {
-    if (error) {
-      throw error
+/* Get all users (default pagination)
+GET /users
+
+# Get users with pagination
+GET /users?page=2&limit=5
+
+# Search active users with active filter & pagination
+GET /users?username=john&active=true&page=1&limit=10
+*/
+router.get('/users', async (request, response) => {
+  const pool = request.app.get('pool');
+  const { 
+    username, 
+    active, 
+    page = 1, 
+    limit = 10 
+  } = request.query;
+
+    // Calculate offset for pagination
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    let whereConditions = [];
+    let params = [];
+    let paramCount = 1;
+  
+    // Build WHERE conditions dynamically
+    if (username) {
+      whereConditions.push(`username ILIKE $${paramCount}`);
+      params.push(`%${username}%`);
+      paramCount++;
     }
-    response.status(200).json(results.rows)
-  })
-})
+  
+    if (active !== undefined) {
+      whereConditions.push(`active = $${paramCount}`);
+      params.push(active === 'true');
+      paramCount++;
+    }
 
-router.get('/user/:id', (request, response) => {
-  const pool = request.app.get('pool')
-  const id = parseInt(request.params.id)
+  let query = `
+    SELECT 
+      user_id, username, email, created_on, last_login, active, type,
+      CASE 
+        WHEN last_login > CURRENT_TIMESTAMP - INTERVAL '5 minutes' THEN true
+        ELSE false
+      END AS is_online
+    FROM users
+  `;
 
-  pool.query(
-    'SELECT * FROM users WHERE user_id = $1',
-    [id],
-    (error, results) => {
-      if (error) {
-        throw error
+   // Add WHERE clause if there are conditions
+   if (whereConditions.length > 0) {
+    query += ` WHERE ${whereConditions.join(' AND ')}`;
+  }
+
+  // Add pagination
+  query += ` ORDER BY user_id ASC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+  params.push(parseInt(limit), offset);
+
+  // Count query for total records
+  let countQuery = `SELECT COUNT(*) FROM users`;
+  let countParams = [];
+  let countParamCount = 1;
+
+  if (whereConditions.length > 0) {
+    // Rebuild params for count query
+    if (username) {
+      countParams.push(`%${username}%`);
+      countParamCount++;
+    }
+    if (active !== undefined) {
+      countParams.push(active === 'true');
+      countParamCount++;
+    }
+    
+    countQuery += ` WHERE ${whereConditions.join(' AND ')}`;
+  }
+
+  try {
+    // Execute both queries
+    const [result, countResult] = await Promise.all([
+      pool.query(query, params),
+      pool.query(countQuery, countParams)
+    ]);
+
+    const totalRecords = parseInt(countResult.rows[0].count);
+    const totalPages = Math.ceil(totalRecords / parseInt(limit));
+
+    response.status(200).json({
+      users: result.rows,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalRecords,
+        limit: parseInt(limit),
+        hasNextPage: parseInt(page) < totalPages,
+        hasPreviousPage: parseInt(page) > 1
       }
-      response.status(200).json(results.rows)
-    }
-  )
-})
+    });
+  } catch (error) {
+    console.error(error);
+    response.status(500).json({ message: 'Error fetching users' });
+  }
+});
+  
+//   if (username) {
+//     query += ` WHERE username ILIKE $1`;
+//   }
+  
+//   query += ` ORDER BY user_id ASC;`;
 
-router.post('/user', (request, response) => {
-  const pool = request.app.get('pool')
-  const { username, email, password } = request.body
-  const timestamp = new Date(new Date().toISOString())
-  pool.query(
-    'INSERT INTO users (username, email, password, created_on) VALUES ($1, $2, $3, $4) RETURNING *',
-    [username, email, password, timestamp],
-    (error, results) => {
-      if (error) {
-        throw error
-      }
-      response
-        .status(201)
-        .send(`User ${username} added with ID: ${results.rows[0].user_id}`)
-    }
-  )
-})
+//   try {
+//     const result = username 
+//       ? await pool.query(query, [`%${username}%`]) // Use ILIKE for case-insensitive search
+//       : await pool.query(query);
+//     response.status(200).json(result.rows);
+//   } catch (error) {
+//     console.error(error);
+//     response.status(500).json({ message: 'Error fetching users' });
+//   }
+// });
 
-router.put('/user/:id', (request, response) => {
-  const pool = request.app.get('pool')
-  const id = parseInt(request.params.id)
-  const { username, email } = request.body
+router.get('/users/nearby', async (request, response) => {
+  const pool = request.app.get('pool');
+  const { latitude, longitude, radius, username } = request.query;
 
-  pool.query(
-    'UPDATE users SET username = $1, email = $2 WHERE user_id = $3',
-    [username, email, id],
-    (error, results) => {
-      if (error) {
-        throw error
-      }
-      response.status(200).send(`User ${username} modified with ID: ${id}`)
-    }
-  )
-})
+  if (!latitude || !longitude || !radius) {
+    return response.status(400).json({ message: 'Missing required parameters: latitude, longitude, or radius' });
+  }
 
-router.delete('/user/:id', (request, response) => {
-  const pool = request.app.get('pool')
-  const id = parseInt(request.params.id)
+  let query = `
+    SELECT 
+      u.user_id, u.username, u.email, u.created_on, u.last_login, u.active,
+      ST_X(l.coordinates) as lng, 
+      ST_Y(l.coordinates) as lat,
+      ST_Distance(l.coordinates, ST_SetSRID(ST_Point($1, $2), 4326)) as distance,
+      CASE 
+        WHEN u.last_login > CURRENT_TIMESTAMP - INTERVAL '5 minutes' THEN true
+        ELSE false
+      END AS is_online
+    FROM users u
+    JOIN location l ON u.user_id = l.user_id
+      WHERE l.coordinates IS NOT NULL -- Only users who have shared a location
+      AND u.active = true
+      AND ST_Distance(l.coordinates, ST_SetSRID(ST_Point($1, $2), 4326)) <= $3
+  `;
+  
+  // If username is provided, add a filter to the query
+  if (username) {
+    query += ` AND u.username ILIKE $4`;
+  }
 
-  pool.query('DELETE FROM users WHERE user_id = $1', [id], (error, results) => {
-    if (error) {
-      throw error
-    }
-    response.status(200).send(`User deleted with ID: ${id}`)
-  })
-})
+  query += ` ORDER BY distance ASC;`; // Ensure users are ordered by distance
 
-module.exports = router
+  // Radius is passed as meters, so convert it to an integer
+  const radiusInMeters = parseInt(radius);
+
+  try {
+    const result = username
+      ? await pool.query(query, [longitude, latitude, radiusInMeters, `%${username}%`]) // Include username filter
+      : await pool.query(query, [longitude, latitude, radiusInMeters]);
+
+    response.status(200).json(result.rows);
+  } catch (error) {
+    console.error(error);
+    response.status(500).json({ message: 'Error fetching nearby users' });
+  }
+});
+
+module.exports = router;
