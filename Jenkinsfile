@@ -74,11 +74,11 @@ pipeline {
           sh """
             ssh ${SSH_HOST} '
               set -e
-              BACKUP_DIR=/var/backups/boardingapp/${params.TARGET_ENV}
+              BACKUP_DIR=\$HOME/backups/boardingapp/${params.TARGET_ENV}
               DATA_DIR=${APP_DIR}/containers/postgres/data/pgsql
               TS=\$(date +%F_%H-%M-%S)
 
-              mkdir -p \$BACKUP_DIR
+              mkdir -p "\$BACKUP_DIR"
 
               if [ -d "\$DATA_DIR" ] && [ -n "\$(ls -A \$DATA_DIR 2>/dev/null)" ]; then
                 echo "📦 Backing up Postgres data..."
@@ -174,7 +174,7 @@ EOF
         sh """
           ssh ${SSH_HOST} '
             set -e
-            BACKUP_DIR=/var/backups/boardingapp/${params.TARGET_ENV}
+            BACKUP_DIR=\$HOME/backups/boardingapp/${params.TARGET_ENV}
             DATA_DIR=${APP_DIR}/containers/postgres/data/pgsql
 
             if [ -f "\$BACKUP_DIR/pgsql-latest.tar.gz" ]; then
