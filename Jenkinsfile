@@ -67,7 +67,7 @@ pipeline {
           sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
             sh """
               ssh ${SSH_HOST} '
-                cat > ${APP_DIR}/.env.backend << EOF
+                cat > ${APP_DIR}/.env << EOF
 NODE_ENV=${NODE_ENV}
 PORT=4000
 
