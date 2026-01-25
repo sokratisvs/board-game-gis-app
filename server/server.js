@@ -5,8 +5,9 @@ const bodyParser = require('body-parser');
 const { Pool } = require('pg');
 const session = require('express-session');
 
-// Docker / env vars
-require('dotenv').config();
+
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 // Trust Nginx Proxy Manager
 app.set('trust proxy', 1);
@@ -15,22 +16,44 @@ app.set('trust proxy', 1);
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// CORS Configuration
+const isProduction = process.env.NODE_ENV === 'production';
 const allowedOrigins = process.env.CLIENT_URLS
-  ? process.env.CLIENT_URLS.split(',').map(o => o.trim())
+  ? process.env.CLIENT_URLS.split(',').map(o => o.trim()).filter(Boolean)
   : [];
+
+// Validate CLIENT_URLS in production
+if (isProduction && allowedOrigins.length === 0) {
+  console.error('ERROR: CLIENT_URLS environment variable is required in production');
+  process.exit(1);
+}
 
 app.use(cors({
   origin: function (origin, callback) {
-    // allow server-to-server, curl, Postman
-    if (!origin) return callback(null, true);
+    // Allow requests with no origin (server-to-server, curl, Postman)
+    if (!origin) {
+      return callback(null, true);
+    }
 
-    if (allowedOrigins.includes(origin)) {
+    // Production: Only allow configured origins
+    if (isProduction) {
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS blocked: ${origin}`));
+    }
+
+    // Development: Allow localhost origins or configured origins
+    const devOrigins = ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000'];
+    if (devOrigins.includes(origin) || allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
 
     return callback(new Error(`CORS blocked: ${origin}`));
   },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 // Ensure COOKIE_SECRET is set (required for production)
@@ -65,12 +88,20 @@ app.use(session({
 }));
 
 // DB connection (Docker-safe)
+// Validate database configuration
+if (!process.env.DB_HOST || !process.env.DB_NAME || !process.env.DB_USER || !process.env.DB_PASSWORD) {
+  console.error('ERROR: Database configuration is incomplete. Required: DB_HOST, DB_NAME, DB_USER, DB_PASSWORD');
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
+}
+
 const pool = new Pool({
   host: process.env.DB_HOST,
-  port: process.env.DB_PORT || 5432,
+  port: parseInt(process.env.DB_PORT) || 5432,
   database: process.env.DB_NAME,
   user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
+  password: String(process.env.DB_PASSWORD || ''), // Ensure password is a string
 });
 
 app.set('pool', pool);
