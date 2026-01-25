@@ -1,0 +1,57 @@
+version: '3.8'
+
+# Run from project root: docker compose -f containers/docker-compose.yml up -d --build
+# Paths are relative to this file (containers/). .env must be in project root.
+
+services:
+  db:
+    container_name: postgres
+    build:
+      context: ./postgres
+    restart: always
+    env_file:
+      - ../.env
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - '5432:5432'
+    volumes:
+      - ./postgres/data/pgsql:/var/lib/postgresql/data
+      - ./postgres/db.sql:/docker-entrypoint-initdb.d/db.sql
+
+  backend:
+    container_name: backend
+    build:
+      context: ../server
+      dockerfile: ./backend/Dockerfile
+    ports:
+      - '${BACKEND_PORT:-4000}:4000'
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: 4000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      COOKIE_SECRET: ${COOKIE_SECRET}
+      CLIENT_URLS: ${CLIENT_URLS}
+    depends_on:
+      - db
+
+  frontend:
+    container_name: frontend
+    build:
+      context: ../client
+      dockerfile: ./frontend/Dockerfile
+      args:
+        REACT_APP_API_BASE_URL: ${REACT_APP_API_BASE_URL}
+    ports:
+      - '${FRONTEND_PORT:-3000}:80'
+    depends_on:
+      - backend
+
+volumes:
+  data:
