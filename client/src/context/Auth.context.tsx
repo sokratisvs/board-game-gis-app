@@ -1,6 +1,6 @@
 import { LatLngExpression } from 'leaflet';
 import { PropsWithChildren, createContext, useState } from 'react';
-import axios from 'axios';
+import api from '../api/axios';
 
 type UserStateType = {
   userId: string,
@@ -43,14 +43,14 @@ export const AuthContextProvider = ({ children }: PropsWithChildren<{}>) => {
 
     try {
 
-      const response = await axios.post('http://localhost:5000/login', {
+      const response = await api.post('/login', {
         email,
         password
       });
 
       const { username, id } = response?.data || {}
 
-      const locationResponse = await axios.get(`http://localhost:5000/location/${id}`);
+      const locationResponse = await api.get(`/location/${id}`);
       const location = locationResponse.data?.[0]?.coordinates;
 
       setUser({
@@ -72,9 +72,9 @@ export const AuthContextProvider = ({ children }: PropsWithChildren<{}>) => {
   const register = async (name: string, email: string, password: string, callback: Function, type?: string) => {
     setLoginPending(true);
     setLoginError(undefined);
-    console.log('register type---', type)
+
     try {
-      await axios.post('http://localhost:5000/register', {
+      await api.post('/register', {
         username: name,
         email,
         password,

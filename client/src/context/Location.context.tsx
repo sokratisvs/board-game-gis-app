@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import api from '../api/axios';
 
 interface LocationContextType {
     location: { lat: number; lng: number } | null;
@@ -40,7 +41,7 @@ export const LocationProvider = ({ children }: LocationProviderProps) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const getLocation = () => {
+    const getLocation = useCallback(() => {
         if (!navigator.geolocation) {
             setError('Geolocation is not supported');
             return;
@@ -58,16 +59,12 @@ export const LocationProvider = ({ children }: LocationProviderProps) => {
                 setLoading(false);
             }
         );
-    };
+    }, []); // Empty deps since setState functions are stable
 
     const getSavedLocation = async (userId: string) => {
         try {
-            const response = await fetch(`http://localhost:5000/location/${userId}`, {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' },
-                // body: JSON.stringify({ userId, coordinates }),
-            });
-            const data = await response.json();
+            const response = await api.get(`/location/${userId}`);
+            const data = response.data?.[0]?.coordinates;
             // setLocation(coordinates);
             console.log('Saved location retrieved:', data);
         } catch (error) {
@@ -77,12 +74,10 @@ export const LocationProvider = ({ children }: LocationProviderProps) => {
 
     const saveLocation = async (userId: string, coordinates: { lat: number, lng: number }) => {
         try {
-            const response = await fetch('http://localhost:5000/location', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, coordinates }),
-            });
-            const data = await response.json();
+            const { data } = await api.post('/location', {
+                userId,
+                coordinates,
+              });
             setLocation(coordinates);
             console.log('Location saved:', data);
         } catch (error) {
@@ -92,12 +87,9 @@ export const LocationProvider = ({ children }: LocationProviderProps) => {
 
     const updateLocation = async (userId: string, coordinates: { lat: number, lng: number }) => {
         try {
-            const response = await fetch(`http://localhost:5000/location/${userId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ coordinates }),
-            });
-            const data = await response.json();
+            const { data } = await api.put(`/location/${userId}`, {
+                coordinates,
+              });
             setLocation(coordinates);
             console.log('Location updated:', data);
         } catch (error) {
