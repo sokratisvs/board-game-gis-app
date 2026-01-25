@@ -7,7 +7,10 @@ const session = require('express-session');
 
 
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+const root = path.join(__dirname, '..');
+// Local: .env. VM: .env (from deploy) or .env.backend. Load both; .env.backend overrides when present.
+require('dotenv').config({ path: path.join(root, '.env') });
+require('dotenv').config({ path: path.join(root, '.env.backend') });
 
 // Trust Nginx Proxy Manager
 app.set('trust proxy', 1);
