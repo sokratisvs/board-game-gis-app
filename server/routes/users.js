@@ -102,24 +102,7 @@ router.get('/users', async (request, response) => {
     console.error(error);
     response.status(500).json({ message: 'Error fetching users' });
   }
-});
-  
-//   if (username) {
-//     query += ` WHERE username ILIKE $1`;
-//   }
-  
-//   query += ` ORDER BY user_id ASC;`;
-
-//   try {
-//     const result = username 
-//       ? await pool.query(query, [`%${username}%`]) // Use ILIKE for case-insensitive search
-//       : await pool.query(query);
-//     response.status(200).json(result.rows);
-//   } catch (error) {
-//     console.error(error);
-//     response.status(500).json({ message: 'Error fetching users' });
-//   }
-// });
+})
 
 router.get('/users/nearby', async (request, response) => {
   const pool = request.app.get('pool');

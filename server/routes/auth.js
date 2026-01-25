@@ -7,11 +7,8 @@ const bcrypt = require('bcrypt')
 router.post('/register', async (req, res) => {
   console.log(req.body);
   const pool = req.app.get('pool');
-  const { username, email, password, type } = req.body;
-
-  if (!type) {
-    type = 'user';
-  }
+  const { username, email, password, type: typeInput } = req.body;
+  const resolvedType = typeInput || 'user';
 
   if (!username || !email || !password) {
     return res.status(403).json({ message: 'All fields are required' });
@@ -21,7 +18,7 @@ router.post('/register', async (req, res) => {
   // }
 
   const validTypes = ['user', 'shop', 'event', 'admin'];
-  if (!validTypes.includes(type)) {
+  if (!validTypes.includes(resolvedType)) {
     return res.status(400).json({ message: 'Invalid type. Valid types are: user, shop, event, admin' });
   }
 
@@ -43,7 +40,7 @@ router.post('/register', async (req, res) => {
 
     pool.query(
       'INSERT INTO users (username, email, password, created_on, type) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [username, email, hashedPassword, timestamp, type],
+      [username, email, hashedPassword, timestamp, resolvedType],
       (error, results) => {
         if (error) {
           throw error;
