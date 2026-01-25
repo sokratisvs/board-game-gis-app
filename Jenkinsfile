@@ -52,6 +52,8 @@ pipeline {
             rsync -az --delete \
               --exclude node_modules \
               --exclude .git \
+              --exclude containers/postgres/data \
+              --exclude containers/postgres/data/** \
               ./ ${SSH_HOST}:${APP_DIR}/
           '''
         }
