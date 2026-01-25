@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useCallback } from 'react';
 import api from '../api/axios';
 
 // Base user type (common fields)
@@ -93,7 +93,7 @@ export const UsersContextProvider: React.FC<UsersContextProviderProps> = ({ chil
     const [nearbyError, setNearbyError] = useState<string | null>(null);
 
     // Fetch regular users with pagination
-    const fetchUsers = async (options = {}) => {
+    const fetchUsers = useCallback(async (options = {}) => {
         setUsersLoading(true);
         setUsersError(null);
         try {
@@ -125,7 +125,7 @@ export const UsersContextProvider: React.FC<UsersContextProviderProps> = ({ chil
         } finally {
             setUsersLoading(false);
         }
-    };
+    }, []);
 
     const fetchUsersNearby = async (coords: { lat: number; lng: number }, radius: number) => {
         setNearbyLoading(true);
