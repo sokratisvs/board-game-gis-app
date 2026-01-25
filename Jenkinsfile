@@ -62,9 +62,35 @@ pipeline {
               --exclude node_modules \
               --exclude .git \
               --exclude containers/postgres/data \
-              --exclude containers/postgres/data/** \
               ./ ${SSH_HOST}:${APP_DIR}/
           '''
+        }
+      }
+    }
+
+    stage('Backup Database') {
+      steps {
+        sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
+          sh """
+            ssh ${SSH_HOST} '
+              set -e
+              BACKUP_DIR=/var/backups/boardingapp/${params.TARGET_ENV}
+              DATA_DIR=${APP_DIR}/containers/postgres/data/pgsql
+              TS=\$(date +%F_%H-%M-%S)
+
+              mkdir -p \$BACKUP_DIR
+
+              if [ -d "\$DATA_DIR" ] && [ -n "\$(ls -A \$DATA_DIR 2>/dev/null)" ]; then
+                echo "📦 Backing up Postgres data..."
+                tar -czf \$BACKUP_DIR/pgsql-\$TS.tar.gz -C \$DATA_DIR .
+                ln -sfn \$BACKUP_DIR/pgsql-\$TS.tar.gz \$BACKUP_DIR/pgsql-latest.tar.gz
+              else
+                echo "📦 No data dir or empty (first deploy?) — skipping backup"
+              fi
+
+              find \$BACKUP_DIR -type f -name "pgsql-*.tar.gz" -mtime +7 -delete 2>/dev/null || true
+            '
+          """
         }
       }
     }
@@ -80,7 +106,6 @@ pipeline {
               ssh ${SSH_HOST} '
                 cat > ${APP_DIR}/.env << EOF
 NODE_ENV=${NODE_ENV}
-PORT=4000
 
 DB_HOST=db
 DB_PORT=5432
@@ -116,8 +141,10 @@ EOF
         sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
           sh """
             ssh ${SSH_HOST} '
-              cd ${APP_DIR} &&
-              docker compose -f ${COMPOSE_FILE} --env-file .env down
+              set -e
+              cd ${APP_DIR}
+              docker compose -f ${COMPOSE_FILE} --env-file .env down --remove-orphans || true
+              docker rm -f postgres backend frontend 2>/dev/null || true
             '
           """
           sh """
@@ -142,7 +169,30 @@ EOF
       echo "✅ ${params.TARGET_ENV.toUpperCase()} deployment successful"
     }
     failure {
-      echo "❌ ${params.TARGET_ENV.toUpperCase()} deployment failed"
+      steps {
+        echo "❌ ${params.TARGET_ENV.toUpperCase()} deployment failed"
+        sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
+          sh """
+            ssh ${SSH_HOST} '
+              set -e
+              BACKUP_DIR=/var/backups/boardingapp/${params.TARGET_ENV}
+              DATA_DIR=${APP_DIR}/containers/postgres/data/pgsql
+
+              if [ -f "\$BACKUP_DIR/pgsql-latest.tar.gz" ]; then
+                echo "↩️ Restoring Postgres data from last backup..."
+                docker stop postgres 2>/dev/null || true
+                docker rm -f postgres 2>/dev/null || true
+                mkdir -p \$DATA_DIR
+                rm -rf \$DATA_DIR/*
+                tar -xzf \$BACKUP_DIR/pgsql-latest.tar.gz -C \$DATA_DIR
+                echo "✓ Restore done. Re-run the pipeline to deploy."
+              else
+                echo "⚠️ No backup found — skipping restore"
+              fi
+            '
+          """
+        }
+      }
     }
   }
 }
