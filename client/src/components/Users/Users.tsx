@@ -18,7 +18,7 @@ const UserList = () => {
             limit: 20,
             active: undefined // Don't filter by active status
         });
-    }, []);
+    }, [fetchUsers]);
 
     const handleToggle = async (userId: number) => {
         await toggleUserActive(userId);

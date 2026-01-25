@@ -7,11 +7,8 @@ const bcrypt = require('bcrypt')
 router.post('/register', async (req, res) => {
   console.log(req.body);
   const pool = req.app.get('pool');
-  const { username, email, password, type } = req.body;
-
-  if (!type) {
-    type = 'user';
-  }
+  const { username, email, password, type: typeInput } = req.body;
+  const resolvedType = typeInput || 'user';
 
   if (!username || !email || !password) {
     return res.status(403).json({ message: 'All fields are required' });
@@ -21,7 +18,7 @@ router.post('/register', async (req, res) => {
   // }
 
   const validTypes = ['user', 'shop', 'event', 'admin'];
-  if (!validTypes.includes(type)) {
+  if (!validTypes.includes(resolvedType)) {
     return res.status(400).json({ message: 'Invalid type. Valid types are: user, shop, event, admin' });
   }
 
@@ -41,24 +38,24 @@ router.post('/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
     const timestamp = new Date();
 
-    pool.query(
+    // Insert user into database
+    const result = await pool.query(
       'INSERT INTO users (username, email, password, created_on, type) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [username, email, hashedPassword, timestamp, type],
-      (error, results) => {
-        if (error) {
-          throw error;
-        }
-
-        return res.json({
-          username: results.rows[0].username,
-          id: results.rows[0].user_id,
-          type: results.rows[0].type,
-          active: results.rows[0].active,
-        });
-      }
+      [username, email, hashedPassword, timestamp, resolvedType]
     );
+
+    return res.json({
+      username: result.rows[0].username,
+      id: result.rows[0].user_id,
+      type: result.rows[0].type,
+      active: result.rows[0].active,
+    });
   } catch (err) {
-    return res.status(500).json({ message: err.message });
+    console.error('Registration error:', err);
+    return res.status(500).json({ 
+      message: 'Error creating user account',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 

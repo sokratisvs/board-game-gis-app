@@ -8,7 +8,7 @@ function UpdateLocationComponent() {
     // update location every time the component mounts
     useEffect(() => {
         getLocation();
-    }, [user]);
+    }, [user, getLocation]);
 
     const handleLocationUpdate = async () => {
         if (location) {

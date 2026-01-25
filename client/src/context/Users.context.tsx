@@ -1,5 +1,5 @@
-import React, { createContext, useState, useContext } from 'react';
-import axios from 'axios';
+import React, { createContext, useState, useContext, useCallback } from 'react';
+import api from '../api/axios';
 
 // Base user type (common fields)
 type BaseUser = {
@@ -93,7 +93,7 @@ export const UsersContextProvider: React.FC<UsersContextProviderProps> = ({ chil
     const [nearbyError, setNearbyError] = useState<string | null>(null);
 
     // Fetch regular users with pagination
-    const fetchUsers = async (options = {}) => {
+    const fetchUsers = useCallback(async (options = {}) => {
         setUsersLoading(true);
         setUsersError(null);
         try {
@@ -108,7 +108,7 @@ export const UsersContextProvider: React.FC<UsersContextProviderProps> = ({ chil
             if (limit !== undefined) params.append('limit', limit.toString());
             if (active !== undefined) params.append('active', active.toString());
             if (username) params.append('username', username);
-            const response = await axios.get(`http://localhost:5000/users?${params}`);
+            const response = await api.get(`/users?${params}`);
             // Handle both paginated and non-paginated responses
             if (response.data.users) {
                 // Paginated response
@@ -125,13 +125,13 @@ export const UsersContextProvider: React.FC<UsersContextProviderProps> = ({ chil
         } finally {
             setUsersLoading(false);
         }
-    };
+    }, []);
 
     const fetchUsersNearby = async (coords: { lat: number; lng: number }, radius: number) => {
         setNearbyLoading(true);
         setNearbyError(null);
         try {
-            const response = await axios.get('http://localhost:5000/users/nearby', {
+            const response = await api.get('/users/nearby', {
                 params: {
                     longitude: coords.lng,
                     latitude: coords.lat,
@@ -159,7 +159,7 @@ export const UsersContextProvider: React.FC<UsersContextProviderProps> = ({ chil
                 throw new Error('User not found');
             }
 
-            const response = await axios.put(`http://localhost:5000/user/${userId}`, {
+            const { data } = await api.put(`/user/${userId}`, {
                 active: !currentUser.active
             });
 
@@ -179,7 +179,7 @@ export const UsersContextProvider: React.FC<UsersContextProviderProps> = ({ chil
                 setUsers(prevUsers =>
                     prevUsers.map(user =>
                         user.user_id === userId
-                            ? { ...user, active: response.data.user.active }
+                            ? { ...user, active: data.user.active }
                             : user
                     )
                 );
@@ -190,7 +190,7 @@ export const UsersContextProvider: React.FC<UsersContextProviderProps> = ({ chil
                 setNearbyUsers(prevUsers =>
                     prevUsers.map(user =>
                         user.user_id === userId
-                            ? { ...user, active: response.data.user.active }
+                            ? { ...user, active: data.user.active }
                             : user
                     )
                 );

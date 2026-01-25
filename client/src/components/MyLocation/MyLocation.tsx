@@ -1,5 +1,5 @@
 import L, { LatLngExpression } from 'leaflet';
-import { useContext, useEffect, useState } from 'react'
+import { useContext, useEffect, useState, useRef } from 'react'
 import { Popup, useMap } from 'react-leaflet';
 import { useUsers } from '../../context/Users.context';
 import LocationMarker from '../LocationMarker/LocationMarker';
@@ -9,25 +9,36 @@ import { AuthContext } from '../../context/Auth.context';
 export default function MyLocation() {
     const { user } = useContext(AuthContext);
     const [myCoordinates, setMyCoordinates] = useState<LatLngExpression>([0, 0]);
-    const { location, getLocation, saveLocation } = useContext(LocationContext);
+    const { saveLocation } = useContext(LocationContext);
     const { fetchUsersNearby } = useUsers();
-    const [radius, setRadius] = useState(50000);
-    // const [bbox, setBbox] = useState([]);
-
     const map = useMap();
+    
+    // Use refs to store latest values for use in event handler
+    const saveLocationRef = useRef(saveLocation);
+    const fetchUsersNearbyRef = useRef(fetchUsersNearby);
+    const userIdRef = useRef(user?.userId);
+    
+    // Update refs when values change
+    useEffect(() => {
+        saveLocationRef.current = saveLocation;
+        fetchUsersNearbyRef.current = fetchUsersNearby;
+        userIdRef.current = user?.userId;
+    }, [saveLocation, fetchUsersNearby, user?.userId]);
 
     useEffect(() => {
+        if (!map || !userIdRef.current) return;
+        
         map.locate().on("locationfound", function (e) {
-            setMyCoordinates(e.latlng)
+            setMyCoordinates(e.latlng);
             map.flyTo(e.latlng, map.getZoom());
-            const radius = e.accuracy;
-            const circle = L.circle(e.latlng, radius);
+            const accuracyRadius = e.accuracy;
+            const circle = L.circle(e.latlng, accuracyRadius);
             circle.addTo(map);
             // setBbox(e?.bounds.toBBoxString().split(","));
-            saveLocation(user.userId, e.latlng);
-            fetchUsersNearby(e.latlng, radius);
+            saveLocationRef.current(userIdRef.current, e.latlng);
+            fetchUsersNearbyRef.current(e.latlng, accuracyRadius);
         });
-    }, []);
+    }, [map]);
 
     return myCoordinates && (
         <LocationMarker position={myCoordinates} type="myLocation" name="My location">

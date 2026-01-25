@@ -1,4 +1,4 @@
-FROM postgres:16.1
+FROM postgres:16
 
 # RUN apt-get update \
 #     && apt-get install -y wget postgresql-16-postgis-3 postgis
