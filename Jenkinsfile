@@ -9,19 +9,23 @@ pipeline {
     )
   }
 
-  environment {
-    APP_DIR = params.TARGET_ENV == 'production'
-      ? '/var/www/boardingapp/production'
-      : '/var/www/boardingapp/staging'
-
-    SSH_HOST = params.TARGET_ENV == 'production'
-      ? 'deploy@100.PROD.IP.HERE'
-      : 'deploy@100.124.133.68'
-
-    NODE_ENV = params.TARGET_ENV
-  }
-
   stages {
+
+    stage('Init') {
+      steps {
+        script {
+          if (params.TARGET_ENV == 'production') {
+            env.APP_DIR  = '/var/www/boardingapp/production'
+            env.SSH_HOST = 'deploy@100.PROD.IP.HERE'
+            env.NODE_ENV = 'production'
+          } else {
+            env.APP_DIR  = '/var/www/boardingapp/staging'
+            env.SSH_HOST = 'deploy@100.124.133.68'
+            env.NODE_ENV = 'staging'
+          }
+        }
+      }
+    }
 
     stage('Checkout') {
       steps {
@@ -90,7 +94,6 @@ EOF
       }
     }
 
-    // Docker Compose V2 (docker compose). Deploy host must have the Compose V2 plugin.
     stage('Build & Deploy (Docker)') {
       steps {
         sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
