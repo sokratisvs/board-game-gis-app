@@ -23,6 +23,7 @@ pipeline {
             env.SSH_HOST = 'deploy@100.124.133.68'
             env.NODE_ENV = 'staging'
           }
+          env.COMPOSE_FILE = 'containers/postgres/docker-compose.yml'
         }
       }
     }
@@ -100,8 +101,8 @@ EOF
           sh """
             ssh ${SSH_HOST} '
               cd ${APP_DIR} &&
-              docker compose down &&
-              docker compose up -d --build
+              docker compose -f ${COMPOSE_FILE} down &&
+              docker compose -f ${COMPOSE_FILE} up -d --build
             '
           """
         }
