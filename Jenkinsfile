@@ -169,29 +169,27 @@ EOF
       echo "✅ ${params.TARGET_ENV.toUpperCase()} deployment successful"
     }
     failure {
-      steps {
-        echo "❌ ${params.TARGET_ENV.toUpperCase()} deployment failed"
-        sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
-          sh """
-            ssh ${SSH_HOST} '
-              set -e
-              BACKUP_DIR=/var/backups/boardingapp/${params.TARGET_ENV}
-              DATA_DIR=${APP_DIR}/containers/postgres/data/pgsql
+      echo "❌ ${params.TARGET_ENV.toUpperCase()} deployment failed"
+      sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
+        sh """
+          ssh ${SSH_HOST} '
+            set -e
+            BACKUP_DIR=/var/backups/boardingapp/${params.TARGET_ENV}
+            DATA_DIR=${APP_DIR}/containers/postgres/data/pgsql
 
-              if [ -f "\$BACKUP_DIR/pgsql-latest.tar.gz" ]; then
-                echo "↩️ Restoring Postgres data from last backup..."
-                docker stop postgres 2>/dev/null || true
-                docker rm -f postgres 2>/dev/null || true
-                mkdir -p \$DATA_DIR
-                rm -rf \$DATA_DIR/*
-                tar -xzf \$BACKUP_DIR/pgsql-latest.tar.gz -C \$DATA_DIR
-                echo "✓ Restore done. Re-run the pipeline to deploy."
-              else
-                echo "⚠️ No backup found — skipping restore"
-              fi
-            '
-          """
-        }
+            if [ -f "\$BACKUP_DIR/pgsql-latest.tar.gz" ]; then
+              echo "↩️ Restoring Postgres data from last backup..."
+              docker stop postgres 2>/dev/null || true
+              docker rm -f postgres 2>/dev/null || true
+              mkdir -p \$DATA_DIR
+              rm -rf \$DATA_DIR/*
+              tar -xzf \$BACKUP_DIR/pgsql-latest.tar.gz -C \$DATA_DIR
+              echo "✓ Restore done. Re-run the pipeline to deploy."
+            else
+              echo "⚠️ No backup found — skipping restore"
+            fi
+          '
+        """
       }
     }
   }

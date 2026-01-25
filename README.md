@@ -73,7 +73,7 @@ To get a local copy up and running follow these simple example steps.
    DB_NAME = '<name-of-database>'
    DB_USER = '<admin-user>'
    DB_PASSWORD = '<database-password>'
-   COOKIE_SECRET='<cookie-secret-string>'
+   COOKIE_SECRET = '<cookie-secret-string>'
    ```
 3. Using Docker to create a new postgres database
    - **Docker Compose V2** (deployment, Docker Desktop, modern installs):
