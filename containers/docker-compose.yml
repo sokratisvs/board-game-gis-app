@@ -1,13 +1,9 @@
-version: '3.8'
-
-# Run from project root: docker compose -f containers/docker-compose.yml up -d --build
-# Paths are relative to this file (containers/). .env must be in project root.
-
 services:
   db:
     container_name: postgres
     build:
       context: ./postgres
+      dockerfile: Dockerfile
     restart: always
     env_file:
       - ../.env
@@ -25,7 +21,7 @@ services:
     container_name: backend
     build:
       context: ../server
-      dockerfile: ./backend/Dockerfile
+      dockerfile: ../containers/backend/Dockerfile
     ports:
       - '${BACKEND_PORT:-4000}:4000'
     environment:
@@ -45,13 +41,10 @@ services:
     container_name: frontend
     build:
       context: ../client
-      dockerfile: ./frontend/Dockerfile
+      dockerfile: ../containers/frontend/Dockerfile
       args:
         REACT_APP_API_BASE_URL: ${REACT_APP_API_BASE_URL}
     ports:
       - '${FRONTEND_PORT:-3000}:80'
     depends_on:
       - backend
-
-volumes:
-  data:
