@@ -53,12 +53,14 @@ To get a local copy up and running follow these simple example steps.
 
 ### Prerequisites
 
-Check your environment that supports at least node v18 and above
-
-- npm
+- **Node** v18 or above
+- **npm**
   ```sh
   npm install npm@latest -g
   ```
+- **Docker** and **Docker Compose**
+  - Prefer **Compose V2** (`docker compose`), used in deployment.
+  - Legacy **Compose V1** (`docker-compose`) is also supported for local development.
 
 ### Installation
 
@@ -73,11 +75,17 @@ Check your environment that supports at least node v18 and above
    DB_PASSWORD = '<database-password>'
    COOKIE_SECRET='<cookie-secret-string>'
    ```
-3. Using docker to create new postgres database under the command
-   ```sh
-   cd ./containers/postgres
-   docker-compose --env-file ../../.env up -d
-   ```
+3. Using Docker to create a new postgres database
+   - **Docker Compose V2** (deployment, Docker Desktop, modern installs):
+     ```sh
+     cd ./containers/postgres
+     docker compose --env-file ../../.env up -d
+     ```
+   - **Legacy Docker Compose V1** (standalone `docker-compose` on older systems):
+     ```sh
+     cd ./containers/postgres
+     docker-compose --env-file ../../.env up -d
+     ```
 4. Install NPM packages & start server
    ```sh
    cd ./server
