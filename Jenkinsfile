@@ -15,15 +15,24 @@ pipeline {
       steps {
         script {
           if (params.TARGET_ENV == 'production') {
-            env.APP_DIR  = '/var/www/boardingapp/production'
-            env.SSH_HOST = 'deploy@100.PROD.IP.HERE'
-            env.NODE_ENV = 'production'
+            env.APP_DIR        = '/var/www/boardingapp/production'
+            env.SSH_HOST       = 'deploy@100.PROD.IP.HERE'
+            env.NODE_ENV       = 'production'
+            env.FRONTEND_PORT  = '3001'
+            env.BACKEND_PORT   = '4001'
+            env.HOST           = (env.SSH_HOST as String).split('@').last()
+            env.CLIENT_URLS    = "http://${env.HOST}:3001"
+            env.REACT_APP_API_BASE_URL = "http://${env.HOST}:4001"
           } else {
-            env.APP_DIR  = '/var/www/boardingapp/staging'
-            env.SSH_HOST = 'deploy@100.124.133.68'
-            env.NODE_ENV = 'staging'
+            env.APP_DIR        = '/var/www/boardingapp/staging'
+            env.SSH_HOST       = 'deploy@100.124.133.68'
+            env.NODE_ENV       = 'staging'
+            env.FRONTEND_PORT  = '3000'
+            env.BACKEND_PORT   = '4000'
+            env.CLIENT_URLS    = 'http://100.124.133.68:3000,http://localhost:3000,http://localhost:3001'
+            env.REACT_APP_API_BASE_URL = 'http://100.124.133.68:4000'
           }
-          env.COMPOSE_FILE = 'containers/postgres/docker-compose.yml'
+          env.COMPOSE_FILE = 'containers/docker-compose.yml'
         }
       }
     }
@@ -73,13 +82,18 @@ pipeline {
 NODE_ENV=${NODE_ENV}
 PORT=4000
 
-DB_HOST=postgres
+DB_HOST=db
 DB_PORT=5432
 DB_NAME=board_gis_db
 DB_USER=postgres
 DB_PASSWORD=${DB_PASSWORD}
 
 COOKIE_SECRET=${COOKIE_SECRET}
+
+FRONTEND_PORT=${env.FRONTEND_PORT}
+BACKEND_PORT=${env.BACKEND_PORT}
+CLIENT_URLS=${env.CLIENT_URLS}
+REACT_APP_API_BASE_URL=${env.REACT_APP_API_BASE_URL}
 EOF
               '
             """
@@ -103,8 +117,19 @@ EOF
           sh """
             ssh ${SSH_HOST} '
               cd ${APP_DIR} &&
-              docker compose -f ${COMPOSE_FILE} down &&
-              docker compose -f ${COMPOSE_FILE} up -d --build
+              docker compose -f ${COMPOSE_FILE} --env-file .env down
+            '
+          """
+          sh """
+            ssh ${SSH_HOST} '
+              cd ${APP_DIR} &&
+              docker compose -f ${COMPOSE_FILE} --env-file .env build
+            '
+          """
+          sh """
+            ssh ${SSH_HOST} '
+              cd ${APP_DIR} &&
+              docker compose -f ${COMPOSE_FILE} --env-file .env up -d
             '
           """
         }
