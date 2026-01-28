@@ -7,6 +7,22 @@ pipeline {
       choices: ['staging', 'production'],
       description: 'Deployment environment'
     )
+    string(
+      name: 'FRONTEND_DOMAIN',
+      defaultValue: '',
+      description: 'Override frontend domain (e.g. staging-apps.boardgame.tail272227.ts.net). Leave empty to use default.'
+    )
+    string(
+      name: 'BACKEND_DOMAIN',
+      defaultValue: '',
+      description: 'Override backend API domain (e.g. api-staging-apps.boardgame.tail272227.ts.net). Leave empty to use default.'
+    )
+    choice(
+      name: 'USE_HTTPS',
+      choices: ['true', 'false'],
+      defaultValue: 'true',
+      description: 'Use HTTPS URLs (set to false if using HTTP only or Tailscale HTTPS)'
+    )
   }
 
   stages {
@@ -15,22 +31,35 @@ pipeline {
       steps {
         script {
           if (params.TARGET_ENV == 'production') {
-            env.APP_DIR        = '/var/www/boardingapp/production'
-            env.SSH_HOST       = 'deploy@100.PROD.IP.HERE'
-            env.NODE_ENV       = 'production'
-            env.FRONTEND_PORT  = '3001'
-            env.BACKEND_PORT   = '4001'
-            env.HOST           = (env.SSH_HOST as String).split('@').last()
-            env.CLIENT_URLS    = "http://${env.HOST}:3001"
-            env.REACT_APP_API_BASE_URL = "http://${env.HOST}:4001"
+            env.APP_DIR       = '/var/www/boardingapp/production'
+            env.SSH_HOST      = 'deploy@production-apps.tail272227.ts.net'
+            env.NODE_ENV      = 'production'
+            env.FRONTEND_PORT = '3001'
+            env.BACKEND_PORT  = '4001'
+            env.HOST          = (env.SSH_HOST as String).split('@').last()
+            
+            // Use custom domains if provided, otherwise defaults
+            def frontendDomain = params.FRONTEND_DOMAIN?.trim() ?: 'production-apps.tail272227.ts.net'
+            def backendDomain = params.BACKEND_DOMAIN?.trim() ?: 'api-production.tail272227.ts.net'
+            def protocol = (params.USE_HTTPS == 'true') ? 'https' : 'http'
+            
+            env.CLIENT_URLS = "${protocol}://${frontendDomain}"
+            env.REACT_APP_API_BASE_URL = "${protocol}://${backendDomain}"
           } else {
             env.APP_DIR        = '/var/www/boardingapp/staging'
-            env.SSH_HOST       = 'deploy@100.124.133.68'
+            env.SSH_HOST       = 'deploy@staging-apps.tail272227.ts.net'
             env.NODE_ENV       = 'staging'
             env.FRONTEND_PORT  = '3000'
             env.BACKEND_PORT   = '4000'
-            env.CLIENT_URLS    = 'http://100.124.133.68:3000,http://localhost:3000,http://localhost:3001'
-            env.REACT_APP_API_BASE_URL = 'http://100.124.133.68:4000'
+            env.HOST           = (env.SSH_HOST as String).split('@').last()
+            
+            // Use custom domains if provided, otherwise defaults
+            def frontendDomain = params.FRONTEND_DOMAIN?.trim() ?: 'staging-apps.tail272227.ts.net'
+            def backendDomain = params.BACKEND_DOMAIN?.trim() ?: 'api-staging-apps.tail272227.ts.net'
+            def protocol = (params.USE_HTTPS == 'true') ? 'https' : 'http'
+            
+            env.CLIENT_URLS = "${protocol}://${frontendDomain}"
+            env.REACT_APP_API_BASE_URL = "${protocol}://${backendDomain}"
           }
           env.COMPOSE_FILE = 'containers/docker-compose.yml'
         }
@@ -47,7 +76,7 @@ pipeline {
       steps {
         sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
           sh '''
-            ssh -o StrictHostKeyChecking=no ${SSH_HOST} \
+            ssh -o BatchMode=yes -o ConnectTimeout=10 ${SSH_HOST} \
             "whoami && hostname && mkdir -p ${APP_DIR}"
           '''
         }
@@ -72,7 +101,7 @@ pipeline {
       steps {
         sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
           sh """
-            ssh ${SSH_HOST} '
+            ssh -o BatchMode=yes -o ConnectTimeout=10 ${SSH_HOST} '
               set -e
               BACKUP_DIR=\$HOME/backups/boardingapp/${params.TARGET_ENV}
               DATA_DIR=${APP_DIR}/containers/postgres/data/pgsql
@@ -85,7 +114,7 @@ pipeline {
                 tar -czf \$BACKUP_DIR/pgsql-\$TS.tar.gz -C \$DATA_DIR .
                 ln -sfn \$BACKUP_DIR/pgsql-\$TS.tar.gz \$BACKUP_DIR/pgsql-latest.tar.gz
               else
-                echo "📦 No data dir or empty (first deploy?) — skipping backup"
+                echo "📦 No data dir or empty — skipping backup"
               fi
 
               find \$BACKUP_DIR -type f -name "pgsql-*.tar.gz" -mtime +7 -delete 2>/dev/null || true
@@ -103,7 +132,7 @@ pipeline {
         ]) {
           sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
             sh """
-              ssh ${SSH_HOST} '
+              ssh -o BatchMode=yes -o ConnectTimeout=10 ${SSH_HOST} '
                 cat > ${APP_DIR}/.env << EOF
 NODE_ENV=${NODE_ENV}
 
@@ -140,7 +169,7 @@ EOF
       steps {
         sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
           sh """
-            ssh ${SSH_HOST} '
+            ssh -o BatchMode=yes -o ConnectTimeout=10 ${SSH_HOST} '
               set -e
               cd ${APP_DIR}
               docker compose -f ${COMPOSE_FILE} --env-file .env down --remove-orphans || true
@@ -148,13 +177,13 @@ EOF
             '
           """
           sh """
-            ssh ${SSH_HOST} '
+            ssh -o BatchMode=yes -o ConnectTimeout=10 ${SSH_HOST} '
               cd ${APP_DIR} &&
               docker compose -f ${COMPOSE_FILE} --env-file .env build
             '
           """
           sh """
-            ssh ${SSH_HOST} '
+            ssh -o BatchMode=yes -o ConnectTimeout=10 ${SSH_HOST} '
               cd ${APP_DIR} &&
               docker compose -f ${COMPOSE_FILE} --env-file .env up -d
             '
@@ -172,7 +201,7 @@ EOF
       echo "❌ ${params.TARGET_ENV.toUpperCase()} deployment failed"
       sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
         sh """
-          ssh ${SSH_HOST} '
+          ssh -o BatchMode=yes -o ConnectTimeout=10 ${SSH_HOST} '
             set -e
             BACKUP_DIR=\$HOME/backups/boardingapp/${params.TARGET_ENV}
             DATA_DIR=${APP_DIR}/containers/postgres/data/pgsql

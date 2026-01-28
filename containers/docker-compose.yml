@@ -4,15 +4,13 @@ services:
     build:
       context: ./postgres
       dockerfile: Dockerfile
-    restart: always
+    restart: unless-stopped
     env_file:
       - ../.env
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
-    ports:
-      - '5432:5432'
     volumes:
       - ./postgres/data/pgsql:/var/lib/postgresql/data
       - ./postgres/db.sql:/docker-entrypoint-initdb.d/db.sql
@@ -22,6 +20,7 @@ services:
     build:
       context: ../server
       dockerfile: ../containers/backend/Dockerfile
+    restart: unless-stopped
     ports:
       - '${BACKEND_PORT:-4000}:4000'
     environment:
@@ -36,6 +35,11 @@ services:
       CLIENT_URLS: ${CLIENT_URLS}
     depends_on:
       - db
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:4000/health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   frontend:
     container_name: frontend
@@ -44,7 +48,13 @@ services:
       dockerfile: ../containers/frontend/Dockerfile
       args:
         REACT_APP_API_BASE_URL: ${REACT_APP_API_BASE_URL}
+    restart: unless-stopped
     ports:
       - '${FRONTEND_PORT:-3000}:80'
     depends_on:
       - backend
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost']
+      interval: 30s
+      timeout: 5s
+      retries: 3
