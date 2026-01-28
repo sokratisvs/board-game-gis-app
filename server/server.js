@@ -131,6 +131,11 @@ const pool = new Pool({
 
 app.set('pool', pool)
 
+// Health check (for Docker / Jenkins / monitoring)
+app.get('/health', (_, res) => {
+  res.status(200).type('text/plain').send('ok\n')
+})
+
 // Routes
 app.use('/', require('./routes/auth'))
 app.use('/', require('./routes/user'))
