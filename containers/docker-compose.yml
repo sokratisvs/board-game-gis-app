@@ -36,7 +36,8 @@ services:
     depends_on:
       - db
     healthcheck:
-      test: ['CMD-SHELL', 'wget -q --spider http://127.0.0.1:4000/health || exit 1']
+      test:
+        ['CMD-SHELL', 'wget -q --spider http://127.0.0.1:4000/health || exit 1']
       interval: 30s
       timeout: 5s
       retries: 3
@@ -51,12 +52,16 @@ services:
         REACT_APP_BASE_PATH: ${REACT_APP_BASE_PATH:-}
         PUBLIC_URL: ${PUBLIC_URL:-}
     restart: unless-stopped
+    environment:
+      BASE_PATH: ${BASE_PATH:-${REACT_APP_BASE_PATH:-}}
+      REACT_APP_BASE_PATH: ${BASE_PATH:-${REACT_APP_BASE_PATH:-}}
     ports:
       - '${FRONTEND_PORT:-3000}:80'
     depends_on:
       - backend
     healthcheck:
-      test: ['CMD-SHELL', 'wget -q --spider http://127.0.0.1:80/ || exit 1']
+      test:
+        ['CMD-SHELL', 'wget -q --spider http://127.0.0.1:80/health || exit 1']
       interval: 30s
       timeout: 5s
       retries: 3

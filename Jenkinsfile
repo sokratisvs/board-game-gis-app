@@ -45,11 +45,13 @@ pipeline {
             def base = params.BASE_PATH.trim().replaceAll('^/+|/+$', '')
             def path = base ? "/${base}" : ''
             def proxyHost = (params.PROXY_HOST?.trim() ?: 'http://sokratisvsproxy.tail272227.ts.net').replaceAll('/+$', '')
-            env.REACT_APP_BASE_PATH = path
-            env.PUBLIC_URL = path
+            env.BASE_PATH = path
+            env.REACT_APP_BASE_PATH = ''   // empty at build = path-agnostic; base path injected at runtime
+            env.PUBLIC_URL = ''            // empty at build so entrypoint rewrites asset URLs at runtime
             env.CLIENT_URLS = "${proxyHost},${proxyHost}${path}"
             env.REACT_APP_API_BASE_URL = "${proxyHost}${path}/api"
           } else {
+            env.BASE_PATH = ''
             env.REACT_APP_BASE_PATH = ''
             env.PUBLIC_URL = ''
           }
@@ -142,6 +144,7 @@ CLIENT_URLS=${env.CLIENT_URLS}
 REACT_APP_API_BASE_URL=${env.REACT_APP_API_BASE_URL}
 REACT_APP_BASE_PATH=${env.REACT_APP_BASE_PATH}
 PUBLIC_URL=${env.PUBLIC_URL}
+BASE_PATH=${env.BASE_PATH}
 EOF
               '
             """
