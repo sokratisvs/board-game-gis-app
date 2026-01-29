@@ -21,7 +21,7 @@ pipeline {
             env.FRONTEND_PORT = '3001'
             env.BACKEND_PORT  = '4001'
             env.CLIENT_URLS   = 'http://production-apps.tail272227.ts.net'
-            env.REACT_APP_API_BASE_URL = 'http://staging-apps.tail272227.ts.net/api'
+            env.REACT_APP_API_BASE_URL = 'http://production-apps.tail272227.ts.net/api'
           } else {
             env.APP_DIR        = '/var/www/boardingapp/staging'
             env.SSH_HOST       = 'deploy@staging-apps.tail272227.ts.net'
