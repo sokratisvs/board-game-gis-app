@@ -1,13 +1,33 @@
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply m-0 font-sans antialiased text-slate-800 bg-slate-50;
+  }
+  #root {
+    @apply min-h-screen;
+  }
+}
+
+/* Button primary: outside base layer so it wins over preflight/Bootstrap transparent.
+   Exclude overlay/backdrop so they keep their own background. */
+button:not(.sidebar-backdrop),
+[type='button']:not(.sidebar-backdrop),
+[type='reset']:not(.btn),
+[type='submit']:not(.btn) {
+  background-color: #2563eb !important;
+  color: white;
+}
+button:not(.btn):not(.sidebar-backdrop):hover,
+[type='button']:not(.sidebar-backdrop):hover,
+[type='reset']:not(.btn):hover,
+[type='submit']:not(.btn):hover {
+  background-color: #1d4ed8 !important;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family:
+    source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
