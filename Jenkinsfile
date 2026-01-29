@@ -20,8 +20,7 @@ pipeline {
     choice(
       name: 'USE_HTTPS',
       choices: ['true', 'false'],
-      defaultValue: 'true',
-      description: 'Use HTTPS URLs (set to false if using HTTP only or Tailscale HTTPS)'
+      description: 'Use HTTPS URLs (set to false if using HTTP only or Tailscale HTTPS). First choice is default.'
     )
   }
 
