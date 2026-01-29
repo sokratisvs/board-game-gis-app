@@ -7,21 +7,6 @@ pipeline {
       choices: ['staging', 'production'],
       description: 'Deployment environment'
     )
-    string(
-      name: 'FRONTEND_DOMAIN',
-      defaultValue: '',
-      description: 'Override frontend domain (e.g. staging-apps.boardgame.tail272227.ts.net). Leave empty to use default.'
-    )
-    string(
-      name: 'BACKEND_DOMAIN',
-      defaultValue: '',
-      description: 'Override backend API domain (e.g. api-staging-apps.boardgame.tail272227.ts.net). Leave empty to use default.'
-    )
-    choice(
-      name: 'USE_HTTPS',
-      choices: ['true', 'false'],
-      description: 'Use HTTPS URLs (set to false if using HTTP only or Tailscale HTTPS). First choice is default.'
-    )
   }
 
   stages {
@@ -35,30 +20,16 @@ pipeline {
             env.NODE_ENV      = 'production'
             env.FRONTEND_PORT = '3001'
             env.BACKEND_PORT  = '4001'
-            env.HOST          = (env.SSH_HOST as String).split('@').last()
-            
-            // Use custom domains if provided, otherwise defaults
-            def frontendDomain = params.FRONTEND_DOMAIN?.trim() ?: 'production-apps.tail272227.ts.net'
-            def backendDomain = params.BACKEND_DOMAIN?.trim() ?: 'api-production.tail272227.ts.net'
-            def protocol = (params.USE_HTTPS == 'true') ? 'https' : 'http'
-            
-            env.CLIENT_URLS = "${protocol}://${frontendDomain}"
-            env.REACT_APP_API_BASE_URL = "${protocol}://${backendDomain}"
+            env.CLIENT_URLS   = 'https://production-apps.tail272227.ts.net'
+            env.REACT_APP_API_BASE_URL = 'https://api-production.tail272227.ts.net'
           } else {
             env.APP_DIR        = '/var/www/boardingapp/staging'
             env.SSH_HOST       = 'deploy@staging-apps.tail272227.ts.net'
             env.NODE_ENV       = 'staging'
             env.FRONTEND_PORT  = '3000'
             env.BACKEND_PORT   = '4000'
-            env.HOST           = (env.SSH_HOST as String).split('@').last()
-            
-            // Use custom domains if provided, otherwise defaults
-            def frontendDomain = params.FRONTEND_DOMAIN?.trim() ?: 'staging-apps.tail272227.ts.net'
-            def backendDomain = params.BACKEND_DOMAIN?.trim() ?: 'api-staging-apps.tail272227.ts.net'
-            def protocol = (params.USE_HTTPS == 'true') ? 'https' : 'http'
-            
-            env.CLIENT_URLS = "${protocol}://${frontendDomain}"
-            env.REACT_APP_API_BASE_URL = "${protocol}://${backendDomain}"
+            env.CLIENT_URLS    = 'https://staging-apps.tail272227.ts.net'
+            env.REACT_APP_API_BASE_URL = 'https://api-staging-apps.tail272227.ts.net'
           }
           env.COMPOSE_FILE = 'containers/docker-compose.yml'
         }
