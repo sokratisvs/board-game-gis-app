@@ -7,6 +7,16 @@ pipeline {
       choices: ['staging', 'production'],
       description: 'Deployment environment'
     )
+    string(
+      name: 'BASE_PATH',
+      defaultValue: '',
+      description: 'Optional base path (e.g. boardgamesapp for path-based proxy). Leave empty for root.'
+    )
+    string(
+      name: 'PROXY_HOST',
+      defaultValue: 'http://sokratisvsproxy.tail272227.ts.net',
+      description: 'Proxy host URL when using BASE_PATH (e.g. NPM/LXC hostname). Used for CLIENT_URLS and REACT_APP_API_BASE_URL.'
+    )
   }
 
   stages {
@@ -21,7 +31,7 @@ pipeline {
             env.FRONTEND_PORT = '3001'
             env.BACKEND_PORT  = '4001'
             env.CLIENT_URLS   = 'http://production-apps.tail272227.ts.net'
-            env.REACT_APP_API_BASE_URL = 'http://staging-apps.tail272227.ts.net/api'
+            env.REACT_APP_API_BASE_URL = 'http://production-apps.tail272227.ts.net/api'
           } else {
             env.APP_DIR        = '/var/www/boardingapp/staging'
             env.SSH_HOST       = 'deploy@staging-apps.tail272227.ts.net'
@@ -30,6 +40,18 @@ pipeline {
             env.BACKEND_PORT   = '4000'
             env.CLIENT_URLS    = 'http://staging-apps.tail272227.ts.net'
             env.REACT_APP_API_BASE_URL = 'http://staging-apps.tail272227.ts.net/api'
+          }
+          if (params.BASE_PATH?.trim()) {
+            def base = params.BASE_PATH.trim().replaceAll('^/+|/+$', '')
+            def path = base ? "/${base}" : ''
+            def proxyHost = (params.PROXY_HOST?.trim() ?: 'http://sokratisvsproxy.tail272227.ts.net').replaceAll('/+$', '')
+            env.REACT_APP_BASE_PATH = path
+            env.PUBLIC_URL = path
+            env.CLIENT_URLS = "${proxyHost}${path}"
+            env.REACT_APP_API_BASE_URL = "${proxyHost}${path}/api"
+          } else {
+            env.REACT_APP_BASE_PATH = ''
+            env.PUBLIC_URL = ''
           }
           env.COMPOSE_FILE = 'containers/docker-compose.yml'
         }
@@ -118,6 +140,8 @@ FRONTEND_PORT=${env.FRONTEND_PORT}
 BACKEND_PORT=${env.BACKEND_PORT}
 CLIENT_URLS=${env.CLIENT_URLS}
 REACT_APP_API_BASE_URL=${env.REACT_APP_API_BASE_URL}
+REACT_APP_BASE_PATH=${env.REACT_APP_BASE_PATH}
+PUBLIC_URL=${env.PUBLIC_URL}
 EOF
               '
             """
