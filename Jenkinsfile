@@ -47,7 +47,7 @@ pipeline {
             def proxyHost = (params.PROXY_HOST?.trim() ?: 'http://sokratisvsproxy.tail272227.ts.net').replaceAll('/+$', '')
             env.REACT_APP_BASE_PATH = path
             env.PUBLIC_URL = path
-            env.CLIENT_URLS = "${proxyHost}${path}"
+            env.CLIENT_URLS = "${proxyHost},${proxyHost}${path}"
             env.REACT_APP_API_BASE_URL = "${proxyHost}${path}/api"
           } else {
             env.REACT_APP_BASE_PATH = ''

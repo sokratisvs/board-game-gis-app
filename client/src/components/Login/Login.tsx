@@ -1,6 +1,6 @@
 import { useContext, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/Auth.context';
-import { useNavigate } from 'react-router-dom';
 
 const initialState = {
   email: '',
@@ -85,7 +85,7 @@ export default function Login() {
                   </button>
 
                   <div className="text-center">
-                    <p>Don't have an account yet? <a href="/register">Register</a></p>
+                    <p>Don't have an account yet? <Link to="/register">Register</Link></p>
 
                   </div>
 
