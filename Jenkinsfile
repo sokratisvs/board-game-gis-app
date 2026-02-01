@@ -36,11 +36,6 @@ pipeline {
             env.CLIENT_URLS   = 'https://staging-apps.tail272227.ts.net'
             env.REACT_APP_API_BASE_URL = '/api'
           }
-          env.BUILD_HASH = sh(
-            script: "git rev-parse --short HEAD",
-            returnStdout: true
-          ).trim()
-
           env.COMPOSE_FILE = 'containers/docker-compose.yml'
         }
       }
@@ -49,6 +44,9 @@ pipeline {
     stage('Checkout') {
       steps {
         checkout scm
+        script {
+          env.BUILD_HASH = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+        }
         sh '''
           echo "📌 Deploying from branch: ${GIT_BRANCH:-unknown}"
           echo "📌 Commit: $(git rev-parse --short HEAD) $(git log -1 --oneline)"
@@ -59,7 +57,7 @@ pipeline {
     stage('Test SSH Connectivity') {
       steps {
         sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
-           sh "ssh ${SSH_HOST} 'whoami && hostname && mkdir -p ${APP_DIR}'"
+          sh "ssh ${env.SSH_HOST} 'whoami && hostname && mkdir -p ${env.APP_DIR}'"
         }
       }
     }
@@ -67,13 +65,13 @@ pipeline {
     stage('Sync files to VM') {
       steps {
         sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
-          sh '''
+          sh """
             rsync -az --delete \
               --exclude node_modules \
               --exclude .git \
               --exclude containers/postgres/data \
-              ./ ${SSH_HOST}:${APP_DIR}/
-          '''
+              ./ ${env.SSH_HOST}:${env.APP_DIR}/
+          """
         }
       }
     }
@@ -102,10 +100,10 @@ pipeline {
       steps {
         sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
           sh """
-            ssh -o BatchMode=yes -o ConnectTimeout=10 ${SSH_HOST} '
+            ssh -o BatchMode=yes -o ConnectTimeout=10 ${env.SSH_HOST} '
               set -e
               BACKUP_DIR=\$HOME/backups/boardgames/${params.TARGET_ENV}
-              DATA_DIR=${APP_DIR}/containers/postgres/data/pgsql
+              DATA_DIR=${env.APP_DIR}/containers/postgres/data/pgsql
               TS=\$(date +%F_%H-%M-%S)
 
               mkdir -p "\$BACKUP_DIR"
@@ -134,9 +132,9 @@ pipeline {
         ]) {
           sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
             sh """
-              ssh -o BatchMode=yes -o ConnectTimeout=10 ${SSH_HOST} '
-                cat > ${APP_DIR}/.env << EOF
-NODE_ENV=${NODE_ENV}
+              ssh -o BatchMode=yes -o ConnectTimeout=10 ${env.SSH_HOST} '
+                cat > ${env.APP_DIR}/.env << EOF
+NODE_ENV=${env.NODE_ENV}
 
 DB_HOST=db
 DB_PORT=5432
@@ -151,7 +149,7 @@ BACKEND_PORT=${env.BACKEND_PORT}
 CLIENT_URLS=${env.CLIENT_URLS}
 REACT_APP_API_BASE_URL=${env.REACT_APP_API_BASE_URL}
 
-VITE_BUILD_HASH=${BUILD_HASH}
+VITE_BUILD_HASH=${env.BUILD_HASH}
 EOF
               '
             """
@@ -184,7 +182,7 @@ EOF
               docker compose -f ${env.COMPOSE_FILE} --env-file .env build --no-cache frontend
 
               echo "🧠 Rebuilding BACKEND..."
-              if [ "${params.CLEAN_BUILD}" = "true" ]; then
+              if [ "${params.CLEAN_BUILD ?: false}" = "true" ]; then
                 docker compose -f ${env.COMPOSE_FILE} --env-file .env build --no-cache backend
               else
                 docker compose -f ${env.COMPOSE_FILE} --env-file .env build backend
@@ -206,10 +204,10 @@ EOF
       echo "❌ ${params.TARGET_ENV.toUpperCase()} deployment failed"
       sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
         sh """
-          ssh -o BatchMode=yes -o ConnectTimeout=10 ${SSH_HOST} '
+          ssh -o BatchMode=yes -o ConnectTimeout=10 ${env.SSH_HOST} '
             set -e
             BACKUP_DIR=\$HOME/backups/boardgames/${params.TARGET_ENV}
-            DATA_DIR=${APP_DIR}/containers/postgres/data/pgsql
+            DATA_DIR=${env.APP_DIR}/containers/postgres/data/pgsql
 
           if [ -f "\$BACKUP_DIR/pgsql-latest.tar.gz" ]; then
             echo "↩️ Restoring Postgres data from last backup..."
