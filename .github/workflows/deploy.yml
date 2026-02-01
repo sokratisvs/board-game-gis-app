@@ -1,0 +1,160 @@
+# sync to VM, backup DB, inject .env, docker compose build & up.
+# For Tailscale-only hosts (e.g. staging-apps.tail272227.ts.net),
+# use a self-hosted runner on the same network:
+#   runs-on: [self-hosted, tailscale]  # or your runner label
+# Required secrets (per env): DEPLOY_SSH_KEY_STAGING, DEPLOY_SSH_KEY_PRODUCTION,
+# DB_PASSWORD_STAGING, DB_PASSWORD_PRODUCTION, COOKIE_SECRET_STAGING, COOKIE_SECRET_PRODUCTION
+
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  deploy:
+    name: Deploy (${{ github.event.inputs.target_env || 'staging' }})
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.target_env || 'staging' }}
+
+    env:
+      TARGET_ENV: ${{ github.event.inputs.target_env || 'staging' }}
+      APP_DIR: ${{ github.event.inputs.target_env == 'production' && '/var/www/boardingapp/production' || '/var/www/boardingapp/staging' }}
+      SSH_HOST: ${{ github.event.inputs.target_env == 'production' && 'deploy@production-apps.tail272227.ts.net' || 'deploy@staging-apps.tail272227.ts.net' }}
+      NODE_ENV: ${{ github.event.inputs.target_env == 'production' && 'production' || 'staging' }}
+      FRONTEND_PORT: ${{ github.event.inputs.target_env == 'production' && '3001' || '3000' }}
+      BACKEND_PORT: ${{ github.event.inputs.target_env == 'production' && '4001' || '4000' }}
+      CLIENT_URLS: ${{ github.event.inputs.target_env == 'production' && 'http://production-apps.tail272227.ts.net' || 'http://staging-apps.tail272227.ts.net' }}
+      REACT_APP_API_BASE_URL: ${{ github.event.inputs.target_env == 'production' && 'http://production-apps.tail272227.ts.net/api' || 'http://staging-apps.tail272227.ts.net/api' }}
+      COMPOSE_FILE: containers/docker-compose.yml
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install SSH key (staging)
+        if: env.TARGET_ENV == 'staging'
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY_STAGING }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+      - name: Install SSH key (production)
+        if: env.TARGET_ENV == 'production'
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY_PRODUCTION }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+      - name: Known hosts
+        run: |
+          ssh-keyscan -H ${SSH_HOST#*@} >> ~/.ssh/known_hosts 2>/dev/null || true
+        env:
+          SSH_HOST: ${{ env.SSH_HOST }}
+
+      - name: Test SSH connectivity
+        run: |
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o ConnectTimeout=10 ${{ env.SSH_HOST }} "whoami && hostname && mkdir -p ${{ env.APP_DIR }}"
+
+      - name: Sync files to VM
+        run: |
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new" \
+            --exclude node_modules \
+            --exclude .git \
+            --exclude containers/postgres/data \
+            ./ ${{ env.SSH_HOST }}:${{ env.APP_DIR }}/
+
+      - name: Backup database (remote)
+        run: |
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o ConnectTimeout=10 ${{ env.SSH_HOST }} '
+            set -e
+            BACKUP_DIR=$HOME/backups/boardingapp/${{ env.TARGET_ENV }}
+            DATA_DIR=${{ env.APP_DIR }}/containers/postgres/data/pgsql
+            TS=$(date +%F-%H%M%S)
+            mkdir -p "$BACKUP_DIR"
+            if [ -d "$DATA_DIR" ] && [ -n "$(ls -A "$DATA_DIR" 2>/dev/null)" ]; then
+              echo "Backing up Postgres data..."
+              tar -czf "$BACKUP_DIR/pgsql-$TS.tar.gz" -C "$DATA_DIR" .
+              ln -sfn "$BACKUP_DIR/pgsql-$TS.tar.gz" "$BACKUP_DIR/pgsql-latest.tar.gz"
+            else
+              echo "No data dir or empty — skipping backup"
+            fi
+            find "$BACKUP_DIR" -type f -name "pgsql-*.tar.gz" -mtime +7 -delete || true
+          '
+
+      - name: Create .env (staging)
+        if: env.TARGET_ENV == 'staging'
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD_STAGING }}
+          COOKIE_SECRET: ${{ secrets.COOKIE_SECRET_STAGING }}
+        run: |
+          cat > .env.deploy << EOF
+          NODE_ENV=${{ env.NODE_ENV }}
+
+          DB_HOST=db
+          DB_PORT=5432
+          DB_NAME=board_gis_db
+          DB_USER=postgres
+          DB_PASSWORD=${DB_PASSWORD}
+
+          COOKIE_SECRET=${COOKIE_SECRET}
+
+          FRONTEND_PORT=${{ env.FRONTEND_PORT }}
+          BACKEND_PORT=${{ env.BACKEND_PORT }}
+          CLIENT_URLS=${{ env.CLIENT_URLS }}
+          REACT_APP_API_BASE_URL=${{ env.REACT_APP_API_BASE_URL }}
+          EOF
+
+      - name: Create .env (production)
+        if: env.TARGET_ENV == 'production'
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD_PRODUCTION }}
+          COOKIE_SECRET: ${{ secrets.COOKIE_SECRET_PRODUCTION }}
+        run: |
+          cat > .env.deploy << EOF
+          NODE_ENV=${{ env.NODE_ENV }}
+
+          DB_HOST=db
+          DB_PORT=5432
+          DB_NAME=board_gis_db
+          DB_USER=postgres
+          DB_PASSWORD=${DB_PASSWORD}
+
+          COOKIE_SECRET=${COOKIE_SECRET}
+
+          FRONTEND_PORT=${{ env.FRONTEND_PORT }}
+          BACKEND_PORT=${{ env.BACKEND_PORT }}
+          CLIENT_URLS=${{ env.CLIENT_URLS }}
+          REACT_APP_API_BASE_URL=${{ env.REACT_APP_API_BASE_URL }}
+          EOF
+
+      - name: Upload .env to VM
+        run: |
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new .env.deploy ${{ env.SSH_HOST }}:${{ env.APP_DIR }}/.env
+
+      - name: Build & Deploy (Docker)
+        run: |
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o ConnectTimeout=10 ${{ env.SSH_HOST }} '
+            set -e
+            cd ${{ env.APP_DIR }}
+            docker compose -f ${{ env.COMPOSE_FILE }} --env-file .env down --remove-orphans || true
+            docker compose -f ${{ env.COMPOSE_FILE }} --env-file .env build
+            docker compose -f ${{ env.COMPOSE_FILE }} --env-file .env up -d
+          '
+
+      - name: Restore hint (on failure)
+        if: failure()
+        run: |
+          echo "❌ Deployment failed. On the VM, to restore DB from last backup:"
+          echo "  BACKUP_DIR=\$HOME/backups/boardingapp/${{ env.TARGET_ENV }}"
+          echo "  DATA_DIR=${{ env.APP_DIR }}/containers/postgres/data/pgsql"
+          echo "  (stop postgres, empty DATA_DIR, then) tar -xzf \$BACKUP_DIR/pgsql-latest.tar.gz -C \$DATA_DIR"
