@@ -17,7 +17,12 @@ const mockUpdateLocation = jest.fn()
 const mockSetUserLocation = jest.fn()
 
 const defaultAuthContext = {
-  user: { userId: '1', username: 'Test', coordinates: [0, 0], type: 'myLocation' as const },
+  user: {
+    userId: '1',
+    username: 'Test',
+    coordinates: [0, 0] as [number, number],
+    type: 'myLocation' as const,
+  },
   isLoggedIn: true,
   loginPending: false,
   loginError: undefined,
@@ -44,7 +49,9 @@ const defaultLocationContext = {
 const renderUpdateLocation = (authOverrides = {}, locationOverrides = {}) => {
   return render(
     <AuthContext.Provider value={{ ...defaultAuthContext, ...authOverrides }}>
-      <LocationContext.Provider value={{ ...defaultLocationContext, ...locationOverrides }}>
+      <LocationContext.Provider
+        value={{ ...defaultLocationContext, ...locationOverrides }}
+      >
         <UpdateLocation />
       </LocationContext.Provider>
     </AuthContext.Provider>
@@ -59,7 +66,9 @@ describe('UpdateLocation', () => {
 
   test('renders Update Location button', () => {
     renderUpdateLocation()
-    expect(screen.getByRole('button', { name: /update location/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /update location/i })
+    ).toBeInTheDocument()
   })
 
   test('calls getLocation on mount when user is present', () => {
@@ -71,11 +80,16 @@ describe('UpdateLocation', () => {
     mockGetSavedLocation.mockResolvedValue({ data: [] })
     mockSaveLocation.mockResolvedValue(undefined)
     renderUpdateLocation()
-    await userEvent.click(screen.getByRole('button', { name: /update location/i }))
+    await userEvent.click(
+      screen.getByRole('button', { name: /update location/i })
+    )
     await waitFor(() => {
       expect(mockSetUserLocation).toHaveBeenCalledWith({ lat: 40.5, lng: 21.6 })
       expect(mockGetSavedLocation).toHaveBeenCalledWith('1')
-      expect(mockSaveLocation).toHaveBeenCalledWith('1', { lat: 40.5, lng: 21.6 })
+      expect(mockSaveLocation).toHaveBeenCalledWith('1', {
+        lat: 40.5,
+        lng: 21.6,
+      })
     })
   })
 
@@ -85,9 +99,14 @@ describe('UpdateLocation', () => {
     })
     mockUpdateLocation.mockResolvedValue(undefined)
     renderUpdateLocation()
-    await userEvent.click(screen.getByRole('button', { name: /update location/i }))
+    await userEvent.click(
+      screen.getByRole('button', { name: /update location/i })
+    )
     await waitFor(() => {
-      expect(mockUpdateLocation).toHaveBeenCalledWith('1', { lat: 40.5, lng: 21.6 })
+      expect(mockUpdateLocation).toHaveBeenCalledWith('1', {
+        lat: 40.5,
+        lng: 21.6,
+      })
     })
   })
 })
