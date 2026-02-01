@@ -101,8 +101,8 @@ describe('Register', () => {
     expect(screen.getByRole('button', { name: /sign up/i })).not.toBeDisabled()
   })
 
-  test('calls register with name, email, password, callback, type on submit', async () => {
-    mockRegister.mockImplementation((name, email, password, callback, type) => {
+  test('calls register with name, email, password, type, callback on submit', async () => {
+    mockRegister.mockImplementation((name, email, password, type, callback) => {
       Promise.resolve().then(() => callback(null))
     })
     renderRegister()
@@ -123,14 +123,14 @@ describe('Register', () => {
       'Jane Doe',
       'jane@example.com',
       'secret123',
-      expect.any(Function),
-      'shop'
+      'shop',
+      expect.any(Function)
     )
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/login'))
   })
 
   test('navigates to /login on successful registration', async () => {
-    mockRegister.mockImplementation((name, email, password, callback, type) => {
+    mockRegister.mockImplementation((name, email, password, type, callback) => {
       Promise.resolve().then(() => callback(null))
     })
     renderRegister()

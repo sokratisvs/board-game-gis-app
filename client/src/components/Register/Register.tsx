@@ -27,12 +27,12 @@ export default function Register() {
       name,
       email,
       password,
+      type || undefined,
       (error: LoginErrorType) => {
         if (!error) {
           navigate('/login')
         }
-      },
-      type
+      }
     )
     setState(initialState)
   }
