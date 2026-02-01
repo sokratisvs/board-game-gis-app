@@ -1,35 +1,37 @@
-import { MapContainer, TileLayer } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import LocationMarker from '../LocationMarker/LocationMarker';
-import MyLocation from '../MyLocation/MyLocation';
-import { useUsers } from '../../context/Users.context';
-import './MapComponent.css';
+import { MapContainer, TileLayer } from 'react-leaflet'
+import 'leaflet/dist/leaflet.css'
+import LocationMarker from '../LocationMarker/LocationMarker'
+import MyLocation from '../MyLocation/MyLocation'
+import { useUsers } from '../../context/Users.context'
+import './MapComponent.css'
 
 export default function MapComponent() {
-    const { nearbyUsers } = useUsers();
+  const { nearbyUsers } = useUsers()
 
-    return (
-        <MapContainer
-            center={[40.51906594602173, 21.679130381253447]}
-            zoom={15}
-            maxZoom={19}
-            minZoom={2}
-            bounceAtZoomLimits={true}
-            maxBoundsViscosity={0.95}
-            scrollWheelZoom={false}>
-            <TileLayer
-                noWrap={false}
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            {nearbyUsers.map((user) => (
-                <LocationMarker
-                    key={`user-${user.user_id}`}
-                    position={[user.latitude, user.longitude]}
-                    type={user.type}
-                    name={user.username} />
-            ))}
-            <MyLocation />
-            {/* <LayersControl position="topright">
+  return (
+    <MapContainer
+      center={[40.51906594602173, 21.679130381253447]}
+      zoom={15}
+      maxZoom={19}
+      minZoom={2}
+      bounceAtZoomLimits={true}
+      maxBoundsViscosity={0.95}
+      scrollWheelZoom={false}
+    >
+      <TileLayer
+        noWrap={false}
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+      {nearbyUsers.map((user) => (
+        <LocationMarker
+          key={`user-${user.user_id}`}
+          position={[user.latitude, user.longitude]}
+          type={user.type}
+          name={user.username}
+        />
+      ))}
+      <MyLocation />
+      {/* <LayersControl position="topright">
           <LayersControl.BaseLayer name="OpenStreet">
             <TileLayer
               noWrap={false}
@@ -60,6 +62,6 @@ export default function MapComponent() {
             />
         </LayersControl.BaseLayer>
         </LayersControl>  */}
-        </MapContainer>
-    )
+    </MapContainer>
+  )
 }

@@ -11,6 +11,10 @@ React + TypeScript + Vite frontend.
 - **`npm run preview`** – Serve the production build locally.
 - **`npm run test`** – Run tests once (Vitest).
 - **`npm run test:watch`** – Run tests in watch mode.
+- **`npm run test:e2e`** – Run E2E tests (Playwright). Requires Node 18+. Starts the dev server if not running. Includes login page tests and LCP check for `/login`.
+- **`npm run test:e2e:ui`** – Run E2E tests with Playwright UI.
+
+**E2E (Playwright):** After `npm install`, run `npx playwright install chromium` once to install the browser. Then `npm run test:e2e` will run the login page and LCP tests against `http://localhost:3000/login`.
 
 ## Env
 

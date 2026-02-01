@@ -18,7 +18,13 @@ vi.mock('react-router-dom', async () => ({
 }))
 
 const defaultContext = {
-  user: undefined,
+  user: {
+    userId: '1',
+    username: 'TestUser',
+    coordinates: [0, 0] as [number, number],
+    type: 'myLocation' as const,
+    role: 'user' as const,
+  },
   isLoggedIn: true,
   loginPending: false,
   loginError: undefined,
@@ -55,6 +61,13 @@ describe('Layout', () => {
   test('renders main content when logged in', () => {
     renderLayout({ isLoggedIn: true })
     expect(screen.getByText(/Main content/i)).toBeInTheDocument()
+  })
+
+  test('renders shared header (greeting + Logout) when logged in', () => {
+    renderLayout({ isLoggedIn: true })
+    expect(screen.getByText(/Hello,/i)).toBeInTheDocument()
+    expect(screen.getByText(/TestUser/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument()
   })
 
   test('renders sidebar and bottom nav when logged in', () => {

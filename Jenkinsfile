@@ -143,6 +143,7 @@ EOF
               cd ${APP_DIR}
               docker compose -f ${COMPOSE_FILE} --env-file .env down --remove-orphans || true
               docker compose -f ${COMPOSE_FILE} --env-file .env build
+              # Migrations run automatically via the migrate service before backend starts
               docker compose -f ${COMPOSE_FILE} --env-file .env up -d
             '
           """

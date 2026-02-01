@@ -1,14 +1,16 @@
 import React from 'react'
 import PathConstants from './pathConstants'
 
-const Main = React.lazy(() => import('../components/Main/Main'))
+const Map = React.lazy(() => import('../components/Map/Map'))
 const Users = React.lazy(() => import('../components/Users/Users'))
-// const Settings = React.lazy(() => import('../components/Settings/Settings'))
+const Dashboard = React.lazy(() => import('../components/Dashboard/Dashboard'))
+const Settings = React.lazy(() => import('../components/Settings/Settings'))
 
 const childrenRoutes = [
-  { path: PathConstants.MAIN, element: <Main /> },
+  { path: PathConstants.DASHBOARD, element: <Dashboard /> },
   { path: PathConstants.USERS, element: <Users /> },
-  // { path: PathConstants.SETTINGS, element: <Settings /> },
+  { path: PathConstants.MAP, element: <Map /> },
+  { path: PathConstants.SETTINGS, element: <Settings /> },
 ]
 
 export default childrenRoutes

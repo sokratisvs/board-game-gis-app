@@ -14,10 +14,21 @@ const renderBottomNav = (initialPath = '/') => {
 describe('BottomNav', () => {
   test('renders bottom navigation with Map, Users, Settings links', () => {
     renderBottomNav()
-    expect(screen.getByRole('navigation', { name: /bottom navigation/i })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /map/i })).toHaveAttribute('href', '/')
-    expect(screen.getByRole('link', { name: /users/i })).toHaveAttribute('href', '/users')
-    expect(screen.getByRole('link', { name: /settings/i })).toHaveAttribute('href', '/settings')
+    expect(
+      screen.getByRole('navigation', { name: /bottom navigation/i })
+    ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /map/i })).toHaveAttribute(
+      'href',
+      '/map'
+    )
+    expect(screen.getByRole('link', { name: /users/i })).toHaveAttribute(
+      'href',
+      '/users'
+    )
+    expect(screen.getByRole('link', { name: /settings/i })).toHaveAttribute(
+      'href',
+      '/settings'
+    )
   })
 
   test('renders all nav links when on users path', () => {
@@ -27,8 +38,8 @@ describe('BottomNav', () => {
     expect(screen.getByRole('link', { name: /settings/i })).toBeInTheDocument()
   })
 
-  test('marks root link as current when on home', () => {
-    renderBottomNav('/')
+  test('marks Map link as current when on /map', () => {
+    renderBottomNav('/map')
     const mapLink = screen.getByRole('link', { name: /map/i })
     expect(mapLink).toHaveAttribute('aria-current', 'page')
   })

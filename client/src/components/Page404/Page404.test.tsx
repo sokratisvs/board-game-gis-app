@@ -5,7 +5,9 @@ import Page404 from './Page404'
 describe('Page404', () => {
   test('renders not found message', () => {
     render(<Page404 />)
-    expect(screen.getByRole('heading', { name: /this page could not be found/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: /this page could not be found/i })
+    ).toBeInTheDocument()
   })
 
   test('renders not-found image with alt text', () => {

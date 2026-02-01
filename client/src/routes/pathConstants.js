@@ -1,9 +1,10 @@
 const PathConstants = {
-  MAIN: '/',
+  MAP: '/map',
   LOGIN: 'login',
   REGISTER: 'register',
-  USERS: 'users',
-  SETTINGS: 'settings',
+  USERS: '/users',
+  DASHBOARD: '/',
+  SETTINGS: '/settings',
 }
 
 export default PathConstants

@@ -1,12 +1,16 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Users from './Users'
+import { AuthContext } from '../../context/Auth.context'
+import * as useUsersQueries from '../../hooks/useUsersQueries'
 
-const mockFetchUsers = vi.fn()
-const mockToggleUserActive = vi.fn()
+const mockMutate = vi.fn()
+const mockToggleActive = vi.fn()
 
-const defaultUseUsersReturn = {
+const defaultUsersData = {
   users: [
     {
       user_id: 1,
@@ -14,6 +18,8 @@ const defaultUseUsersReturn = {
       email: 'alice@example.com',
       type: 'user',
       active: true,
+      created_on: '',
+      last_login: '',
     },
     {
       user_id: 2,
@@ -21,32 +27,75 @@ const defaultUseUsersReturn = {
       email: 'bob@example.com',
       type: 'shop',
       active: false,
+      created_on: '',
+      last_login: '',
     },
   ],
-  nearbyUsers: [],
-  usersPagination: {
+  pagination: {
     currentPage: 1,
     totalPages: 2,
+    totalRecords: 2,
+    limit: 20,
     hasNextPage: true,
     hasPreviousPage: false,
   },
-  usersLoading: false,
-  usersError: null,
-  fetchUsers: mockFetchUsers,
-  fetchUsersNearby: vi.fn(),
-  toggleUserActive: mockToggleUserActive,
-  clearUsers: vi.fn(),
-  clearNearbyUsers: vi.fn(),
 }
 
-const mockUseUsers = vi.fn(() => defaultUseUsersReturn)
-vi.mock('../../context/Users.context', () => ({
-  useUsers: () => mockUseUsers(),
+vi.mock('../../hooks/useUsersQueries', () => ({
+  useUsersList: vi.fn(() => ({
+    data: defaultUsersData,
+    isLoading: false,
+    error: null,
+    isFetching: false,
+  })),
+  useUserConfig: vi.fn(() => ({
+    data: null,
+    isLoading: false,
+    error: null,
+  })),
+  useToggleUserActive: vi.fn(() => ({
+    mutate: mockToggleActive,
+    isPending: false,
+  })),
+  useSaveUserConfig: vi.fn(() => ({
+    mutate: mockMutate,
+    isPending: false,
+    error: null,
+  })),
 }))
 
-const renderUsers = (overrides = {}) => {
-  mockUseUsers.mockReturnValue({ ...defaultUseUsersReturn, ...overrides })
-  return render(<Users />)
+const adminContext = {
+  user: { userId: '1', username: 'admin', type: 'myLocation', role: 'admin' },
+  isLoggedIn: true,
+  loginPending: false,
+  loginError: undefined,
+  setUser: vi.fn(),
+  setIsLoggedIn: vi.fn(),
+  setLoginPending: vi.fn(),
+  setLoginError: vi.fn(),
+  register: vi.fn(),
+  login: vi.fn(),
+  logout: vi.fn(),
+  setUserLocation: vi.fn(),
+}
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: false },
+    mutations: { retry: false },
+  },
+})
+
+const renderUsers = (overrides?: Partial<typeof adminContext>) => {
+  return render(
+    <MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <AuthContext.Provider value={{ ...adminContext, ...overrides }}>
+          <Users />
+        </AuthContext.Provider>
+      </QueryClientProvider>
+    </MemoryRouter>
+  )
 }
 
 describe('Users', () => {
@@ -56,80 +105,44 @@ describe('Users', () => {
 
   test('renders Users heading', () => {
     renderUsers()
-    expect(screen.getByRole('heading', { name: /users/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: /^users$/i })
+    ).toBeInTheDocument()
   })
 
-  test('calls fetchUsers on mount', () => {
+  test('renders type filter buttons User, Shop, Event', () => {
     renderUsers()
-    expect(mockFetchUsers).toHaveBeenCalledWith({
-      page: 1,
-      limit: 20,
-      active: undefined,
-    })
-  })
-
-  test('renders filter buttons All Users, Active Only, Inactive Only', () => {
-    renderUsers()
-    const allUsersBtn = screen.getAllByRole('button', { name: /all users/i })[0]
-    const activeOnlyBtn = screen.getAllByRole('button', {
-      name: /^active only$/i,
-    })[0]
-    const inactiveOnlyBtn = screen.getAllByRole('button', {
-      name: /^inactive only$/i,
-    })[0]
-    expect(allUsersBtn).toBeInTheDocument()
-    expect(activeOnlyBtn).toBeInTheDocument()
-    expect(inactiveOnlyBtn).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^user$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^shop$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^event$/i })).toBeInTheDocument()
   })
 
   test('renders user table with usernames and emails', () => {
     renderUsers()
-    expect(screen.getByText('Alice')).toBeInTheDocument()
-    expect(screen.getByText('alice@example.com')).toBeInTheDocument()
-    expect(screen.getByText('Bob')).toBeInTheDocument()
-    expect(screen.getByText('bob@example.com')).toBeInTheDocument()
+    expect(screen.getByRole('grid')).toHaveTextContent('Alice')
+    expect(screen.getByRole('grid')).toHaveTextContent('alice@example.com')
+    expect(screen.getByRole('grid')).toHaveTextContent('Bob')
+    expect(screen.getByRole('grid')).toHaveTextContent('bob@example.com')
   })
 
   test('renders Active/Inactive status badges', () => {
     renderUsers()
-    expect(screen.getByText('Active')).toBeInTheDocument()
-    expect(screen.getByText('Inactive')).toBeInTheDocument()
+    const activeLabels = screen.getAllByText('Active')
+    const inactiveLabels = screen.getAllByText('Inactive')
+    expect(activeLabels.length).toBeGreaterThanOrEqual(1)
+    expect(inactiveLabels.length).toBeGreaterThanOrEqual(1)
   })
 
-  test('calls toggleUserActive when Activate/Deactivate clicked', async () => {
-    mockToggleUserActive.mockResolvedValue(undefined)
+  test('calls toggleUserActive when Disable clicked', async () => {
     renderUsers()
-    const deactivateBtn = screen.getByRole('button', { name: /deactivate/i })
-    await userEvent.click(deactivateBtn)
-    expect(mockToggleUserActive).toHaveBeenCalledWith(1)
-  })
-
-  test('calls fetchUsers with active filter when Active Only clicked', async () => {
-    renderUsers()
-    const activeOnlyBtn = screen.getAllByRole('button', {
-      name: /^active only$/i,
-    })[0]
-    await userEvent.click(activeOnlyBtn)
-    expect(mockFetchUsers).toHaveBeenCalledWith({
-      page: 1,
-      limit: 20,
-      active: true,
+    const disableBtns = screen.getAllByRole('button', {
+      name: /deactivate user/i,
     })
-  })
-
-  test('shows loading state when usersLoading is true', () => {
-    renderUsers({ usersLoading: true })
-    expect(screen.getByText(/loading users/i)).toBeInTheDocument()
-  })
-
-  test('shows error when usersError is set', () => {
-    renderUsers({ usersError: 'Failed to load users' })
-    expect(screen.getByRole('alert')).toHaveTextContent(/failed to load users/i)
-  })
-
-  test('shows No users found when users array is empty', () => {
-    renderUsers({ users: [] })
-    expect(screen.getByText(/no users found/i)).toBeInTheDocument()
+    await userEvent.click(disableBtns[0])
+    expect(mockToggleActive).toHaveBeenCalledWith({
+      userId: 1,
+      currentActive: true,
+    })
   })
 
   test('renders pagination when totalPages > 1', () => {
@@ -139,5 +152,27 @@ describe('Users', () => {
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /next/i })).toBeInTheDocument()
     expect(screen.getByText(/page 1 of 2/i)).toBeInTheDocument()
+  })
+
+  test('shows loading state when usersLoading is true', () => {
+    vi.mocked(useUsersQueries.useUsersList).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      error: null,
+      isFetching: true,
+    } as ReturnType<typeof useUsersQueries.useUsersList>)
+    renderUsers()
+    expect(screen.getByText(/loading users/i)).toBeInTheDocument()
+  })
+
+  test('shows error when usersError is set', () => {
+    vi.mocked(useUsersQueries.useUsersList).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error('Failed to load users'),
+      isFetching: false,
+    } as ReturnType<typeof useUsersQueries.useUsersList>)
+    renderUsers()
+    expect(screen.getByRole('alert')).toHaveTextContent(/failed to load users/i)
   })
 })

@@ -1,10 +1,13 @@
 import { Link, useLocation } from 'react-router-dom'
+import { useContext } from 'react'
+import { AuthContext } from '../../context/Auth.context'
 import PathConstants from '../../routes/pathConstants'
 
-const menuItems = [
-  { label: 'Map View', path: PathConstants.MAIN },
-  { label: 'Users', path: PathConstants.USERS },
-  { label: 'Settings', path: PathConstants.SETTINGS },
+const menuItemsOrder = [
+  { label: 'Dashboard', path: PathConstants.DASHBOARD, adminOnly: true },
+  { label: 'Users', path: PathConstants.USERS, adminOnly: false },
+  { label: 'Map', path: PathConstants.MAP, adminOnly: false },
+  { label: 'Settings', path: PathConstants.SETTINGS, adminOnly: false },
 ]
 
 type SidebarProps = {
@@ -14,6 +17,9 @@ type SidebarProps = {
 
 const Sidebar = ({ open, onToggle }: SidebarProps) => {
   const location = useLocation()
+  const { user } = useContext(AuthContext)
+  const isAdmin = user?.role === 'admin'
+  const menuItems = menuItemsOrder.filter((item) => !item.adminOnly || isAdmin)
 
   return (
     <aside
@@ -74,8 +80,9 @@ const Sidebar = ({ open, onToggle }: SidebarProps) => {
                   aria-current={isActive ? 'page' : undefined}
                 >
                   <span className="shrink-0 w-6 text-center" aria-hidden="true">
-                    {item.label === 'Map View' && '🗺️'}
+                    {item.label === 'Map' && '🗺️'}
                     {item.label === 'Users' && '👥'}
+                    {item.label === 'Dashboard' && '📊'}
                     {item.label === 'Settings' && '⚙️'}
                   </span>
                   {open && <span>{item.label}</span>}

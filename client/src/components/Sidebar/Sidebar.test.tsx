@@ -14,14 +14,14 @@ const renderSidebar = (open = true) => {
 }
 
 describe('Sidebar', () => {
-  test('renders navigation with Map View, Users, Settings links', () => {
+  test('renders navigation with Map, Users, Settings links', () => {
     renderSidebar()
     expect(
       screen.getByRole('navigation', { name: /primary/i })
     ).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /map view/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /^map$/i })).toHaveAttribute(
       'href',
-      '/'
+      '/map'
     )
     expect(screen.getByRole('link', { name: /users/i })).toHaveAttribute(
       'href',
