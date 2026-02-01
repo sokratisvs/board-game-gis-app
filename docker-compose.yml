@@ -1,6 +1,6 @@
 services:
   db:
-    container_name: postgres
+    # container_name: postgres
     build:
       context: ./containers/postgres
       dockerfile: Dockerfile
@@ -24,7 +24,7 @@ services:
 
   migrate:
     image: postgres:16
-    container_name: migrate
+    # container_name: migrate
     environment:
       DB_HOST: db
       DB_PORT: 5432
@@ -41,7 +41,7 @@ services:
     restart: 'no'
 
   backend:
-    container_name: backend
+    # container_name: backend
     build:
       context: ./server
       dockerfile: Dockerfile
@@ -72,7 +72,7 @@ services:
       retries: 3
 
   frontend:
-    container_name: frontend
+    # container_name: frontend
     build:
       context: ./client
       dockerfile: Dockerfile
