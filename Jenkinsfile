@@ -22,7 +22,7 @@ pipeline {
       }
     }
 
-     stage('Init') {
+    stage('Init') {
       steps {
         script {
           if (params.TARGET_ENV == 'production') {
@@ -32,7 +32,6 @@ pipeline {
             env.FRONTEND_PORT = '3001'
             env.BACKEND_PORT  = '4001'
             env.CLIENT_URLS   = 'https://production-apps.tail272227.ts.net'
-            env.REACT_APP_API_BASE_URL = '/api'
           } else {
             env.APP_DIR       = '/var/www/boardgames/staging'
             env.SSH_HOST      = 'deploy@staging-apps.tail272227.ts.net'
@@ -40,9 +39,12 @@ pipeline {
             env.FRONTEND_PORT = '3000'
             env.BACKEND_PORT  = '4000'
             env.CLIENT_URLS   = 'https://staging-apps.tail272227.ts.net'
-            env.REACT_APP_API_BASE_URL = '/api'
           }
-          env.COMPOSE_FILE = 'containers/docker-compose.yml'
+
+          env.BUILD_HASH = sh(
+            script: "git rev-parse --short HEAD",
+            returnStdout: true
+          ).trim()
         }
       }
     }
@@ -177,25 +179,52 @@ EOF
       steps {
         sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
           sh """
-            ssh ${env.SSH_HOST} '
+            ssh ${SSH_HOST} '
               set -e
-              cd ${env.APP_DIR}
+              cd ${APP_DIR}
 
-              echo "🧹 Stopping existing containers..."
-              docker compose -f ${env.COMPOSE_FILE} --env-file .env down --remove-orphans || true
+              echo "🧹 Stopping containers..."
+              docker compose down --remove-orphans || true
 
               echo "🎨 Rebuilding FRONTEND (always no-cache)..."
-              docker compose -f ${env.COMPOSE_FILE} --env-file .env build --no-cache frontend
+              docker compose build --no-cache frontend
 
               echo "🧠 Rebuilding BACKEND..."
-              if [ "${params.CLEAN_BUILD ?: false}" = "true" ]; then
-                docker compose -f ${env.COMPOSE_FILE} --env-file .env build --no-cache backend
+              if [ "${params.CLEAN_BUILD}" = "true" ]; then
+                docker compose build --no-cache backend
               else
-                docker compose -f ${env.COMPOSE_FILE} --env-file .env build backend
+                docker compose build backend
               fi
 
               echo "🚀 Starting containers..."
-              docker compose -f ${env.COMPOSE_FILE} --env-file .env up -d
+              docker compose up -d --force-recreate
+            '
+          """
+        }
+      }
+    }
+
+    stage('Verify Containers Health') {
+      steps {
+        sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
+          sh """
+            ssh ${SSH_HOST} '
+              set -e
+              echo "🔎 Waiting for containers to become healthy..."
+
+              for i in {1..20}; do
+                UNHEALTHY=\$(docker ps --filter "health=unhealthy" --format "{{.Names}}")
+                if [ -z "\$UNHEALTHY" ]; then
+                  echo "✅ All containers healthy"
+                  exit 0
+                fi
+                echo "⏳ Still unhealthy: \$UNHEALTHY"
+                sleep 5
+              done
+
+              echo "❌ Containers did not become healthy in time"
+              docker ps
+              exit 1
             '
           """
         }
