@@ -8,6 +8,7 @@ type UserStateType =
       username: string
       coordinates: LatLngExpression
       type: 'myLocation'
+      role: 'user' | 'shop' | 'event' | 'admin'
     }
   | undefined
 
@@ -57,7 +58,7 @@ export const AuthContextProvider = ({ children }: PropsWithChildren<{}>) => {
         password,
       })
 
-      const { username, id } = response?.data || {}
+      const { username, id, type: role } = response?.data || {}
 
       const locationResponse = await api.get(`/location/${id}`)
       const location = locationResponse.data?.[0]?.coordinates
@@ -67,6 +68,7 @@ export const AuthContextProvider = ({ children }: PropsWithChildren<{}>) => {
         username,
         coordinates: location,
         type: 'myLocation',
+        role: role || 'user',
       })
       setLoginPending(false)
       setIsLoggedIn(true)

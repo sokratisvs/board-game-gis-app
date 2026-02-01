@@ -95,6 +95,23 @@ INSERT INTO location (user_id, coordinates) VALUES
 (4, ST_SetSRID(ST_Point(23.72953503331404, 37.957637371954576), 4326)),
 (5, ST_SetSRID(ST_Point(23.706172718146803, 37.959311695128626), 4326));
 
+-- Board games configuration per user (dashboard: games owned/liked, types, space, city, subscription)
+CREATE TYPE subscription_tier AS ENUM ('free', 'extra');
+
+CREATE TABLE IF NOT EXISTS user_boardgames_config (
+  user_id INT PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
+  games_owned JSONB NOT NULL DEFAULT '[]',
+  games_liked JSONB NOT NULL DEFAULT '[]',
+  game_types_interested JSONB NOT NULL DEFAULT '[]',
+  has_space BOOLEAN NOT NULL DEFAULT false,
+  city VARCHAR(120),
+  subscription subscription_tier NOT NULL DEFAULT 'free',
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_boardgames_config_city ON user_boardgames_config(city) WHERE city IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_user_boardgames_config_subscription ON user_boardgames_config(subscription);
+
 -- Verify the data was inserted correctly
 SELECT u.user_id, u.username, u.email, u.type, u.active, 
        ST_X(l.coordinates) as longitude, ST_Y(l.coordinates) as latitude

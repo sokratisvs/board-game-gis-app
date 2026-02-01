@@ -98,6 +98,17 @@ To get a local copy up and running follow these simple example steps.
    npm install
    ```
 
+### Format & Lint (Prettier & ESLint)
+
+From the **project root** (after `npm install` at root):
+
+- **Format** (Prettier): `npm run format` — format client and server code
+- **Format check**: `npm run format:check` — check formatting without writing
+- **Lint** (ESLint): `npm run lint` — lint client and server
+- **Lint fix**: `npm run lint:fix` — auto-fix lint issues where possible
+
+Config: `.prettierrc.json`, `.prettierignore`, `.eslintrc`.
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- CONTACT -->

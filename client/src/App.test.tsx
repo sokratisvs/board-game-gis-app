@@ -1,5 +1,6 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthContextProvider } from './context/Auth.context'
 import { LocationProvider } from './context/Location.context'
 import { UsersContextProvider } from './context/Users.context'
@@ -43,15 +44,23 @@ vi.mock('./App', async () => {
   }
 })
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: false },
+  },
+})
+
 const renderAppWithProviders = () =>
   render(
-    <AuthContextProvider>
-      <LocationProvider>
-        <UsersContextProvider>
-          <App />
-        </UsersContextProvider>
-      </LocationProvider>
-    </AuthContextProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthContextProvider>
+        <LocationProvider>
+          <UsersContextProvider>
+            <App />
+          </UsersContextProvider>
+        </LocationProvider>
+      </AuthContextProvider>
+    </QueryClientProvider>
   )
 
 describe('App', () => {

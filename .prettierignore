@@ -1,0 +1,20 @@
+# Dependencies and build
+node_modules
+client/dist
+client/build
+server/node_modules
+
+# Lock files
+package-lock.json
+client/package-lock.json
+server/package-lock.json
+
+# Generated / cache
+client/playwright-report
+client/test-results
+*.min.js
+*.min.css
+
+# Misc
+.git
+containers/postgres/data

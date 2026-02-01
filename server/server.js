@@ -146,6 +146,7 @@ app.get('/health', (_, res) => {
 app.use('/api', require('./routes/auth'))
 app.use('/api', require('./routes/user'))
 app.use('/api', require('./routes/location'))
+app.use('/api', require('./routes/config'))
 app.use('/api', require('./routes/users'))
 
 // Start server

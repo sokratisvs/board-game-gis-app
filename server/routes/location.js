@@ -35,7 +35,10 @@ router.post('/location', async (request, response) => {
        RETURNING *`,
       [userId, coordinates.lng, coordinates.lat]
     )
-    response.status(201).json({ message: `User ${userId} location updated`, location: result.rows[0] })
+    response.status(201).json({
+      message: `User ${userId} location updated`,
+      location: result.rows[0],
+    })
   } catch (error) {
     console.error(error)
     response.status(500).json({ error: 'Internal Server Error' })
@@ -47,8 +50,15 @@ router.put('/location/:id', (request, response) => {
   const userId = parseInt(request.params.id)
   const { coordinates } = request.body
 
-  if (!userId || !coordinates || isNaN(coordinates.lat) || isNaN(coordinates.lng)) {
-    return res.status(400).json({ message: 'Invalid user ID or coordinates' });
+  if (
+    !userId ||
+    !coordinates ||
+    isNaN(coordinates.lat) ||
+    isNaN(coordinates.lng)
+  ) {
+    return response
+      .status(400)
+      .json({ message: 'Invalid user ID or coordinates' })
   }
   pool.query(
     'UPDATE location SET coordinates = ST_SetSRID(ST_POINT($1, $2), 4326) WHERE user_id = $3',
@@ -62,7 +72,9 @@ router.put('/location/:id', (request, response) => {
       }
       response
         .status(200)
-        .send(`User ${userId} updated with location: ${results.rows[0].coordinates}`)
+        .send(
+          `User ${userId} updated with location: ${results.rows[0].coordinates}`
+        )
     }
   )
 })
