@@ -36,6 +36,10 @@ pipeline {
             env.CLIENT_URLS   = 'https://staging-apps.tail272227.ts.net'
             env.REACT_APP_API_BASE_URL = '/api'
           }
+          env.BUILD_HASH = sh(
+            script: "git rev-parse --short HEAD",
+            returnStdout: true
+          ).trim()
 
           env.COMPOSE_FILE = 'containers/docker-compose.yml'
         }
@@ -146,6 +150,8 @@ FRONTEND_PORT=${env.FRONTEND_PORT}
 BACKEND_PORT=${env.BACKEND_PORT}
 CLIENT_URLS=${env.CLIENT_URLS}
 REACT_APP_API_BASE_URL=${env.REACT_APP_API_BASE_URL}
+
+VITE_BUILD_HASH=${BUILD_HASH}
 EOF
               '
             """
@@ -170,17 +176,27 @@ EOF
             ssh ${env.SSH_HOST} '
               set -e
               cd ${env.APP_DIR}
+
+              echo "🧹 Stopping existing containers..."
               docker compose -f ${env.COMPOSE_FILE} --env-file .env down --remove-orphans || true
-              BUILD_OPTS=""
-              [ "${params.CLEAN_BUILD ?: false}" = "true" ] && BUILD_OPTS="--no-cache"
-              docker compose -f ${env.COMPOSE_FILE} --env-file .env build \$BUILD_OPTS
+
+              echo "🎨 Rebuilding FRONTEND (always no-cache)..."
+              docker compose -f ${env.COMPOSE_FILE} --env-file .env build --no-cache frontend
+
+              echo "🧠 Rebuilding BACKEND..."
+              if [ "${params.CLEAN_BUILD}" = "true" ]; then
+                docker compose -f ${env.COMPOSE_FILE} --env-file .env build --no-cache backend
+              else
+                docker compose -f ${env.COMPOSE_FILE} --env-file .env build backend
+              fi
+
+              echo "🚀 Starting containers..."
               docker compose -f ${env.COMPOSE_FILE} --env-file .env up -d
             '
           """
         }
       }
     }
-  }
 
   post {
     success {
