@@ -1,112 +1,134 @@
-import { LatLngExpression } from 'leaflet';
-import { PropsWithChildren, createContext, useState } from 'react';
-import api from '../api/axios';
+import { LatLngExpression } from 'leaflet'
+import { PropsWithChildren, createContext, useState } from 'react'
+import api from '../api/axios'
 
-type UserStateType = {
-  userId: string,
-  username: string,
-  coordinates: LatLngExpression,
-  type: 'myLocation'
-} | undefined;
+type UserStateType =
+  | {
+      userId: string
+      username: string
+      coordinates: LatLngExpression
+      type: 'myLocation'
+    }
+  | undefined
 
-type LoginErrorType = {
-  message: 'string'
-} | undefined;
+export type LoginErrorType =
+  | {
+      message: string
+    }
+  | undefined
 
 const initialState = {
-  user: {} as any,
+  user: undefined as UserStateType,
   isLoggedIn: false,
   loginPending: false,
   loginError: null as any,
-  setUser: (value: UserStateType) => { },
-  setIsLoggedIn: (value: boolean) => { },
-  setLoginPending: (value: boolean) => { },
-  setLoginError: (error: LoginErrorType) => { },
-  register: (name: string, email: string, password: string, callback: Function, type: any) => { },
-  login: (email: string, password: string, callback: Function) => { },
-  logout: (callback: Function) => { },
-  setUserLocation: (location: LatLngExpression) => { },
+  setUser: (value: UserStateType) => {},
+  setIsLoggedIn: (value: boolean) => {},
+  setLoginPending: (value: boolean) => {},
+  setLoginError: (error: LoginErrorType) => {},
+  register: (
+    name: string,
+    email: string,
+    password: string,
+    type: string | undefined,
+    callback: Function
+  ) => {},
+  login: (email: string, password: string, callback: Function) => {},
+  logout: (callback: Function) => {},
+  setUserLocation: (location: LatLngExpression) => {},
 }
 
-export const AuthContext = createContext(initialState);
+export const AuthContext = createContext(initialState)
 
 export const AuthContextProvider = ({ children }: PropsWithChildren<{}>) => {
-  const [user, setUser] = useState<UserStateType>(undefined);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [loginPending, setLoginPending] = useState(false);
-  const [loginError, setLoginError] = useState<LoginErrorType>(undefined);
+  const [user, setUser] = useState<UserStateType>(undefined)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [loginPending, setLoginPending] = useState(false)
+  const [loginError, setLoginError] = useState<LoginErrorType>(undefined)
 
   const login = async (email: string, password: string, callback: Function) => {
-    setLoginPending(true);
-    setUser(undefined);
-    setLoginError(undefined);
+    setLoginPending(true)
+    setUser(undefined)
+    setLoginError(undefined)
 
     try {
-
       const response = await api.post('/login', {
         email,
-        password
-      });
+        password,
+      })
 
       const { username, id } = response?.data || {}
 
-      const locationResponse = await api.get(`/location/${id}`);
-      const location = locationResponse.data?.[0]?.coordinates;
+      const locationResponse = await api.get(`/location/${id}`)
+      const location = locationResponse.data?.[0]?.coordinates
 
       setUser({
         userId: id,
         username,
         coordinates: location,
-        type: 'myLocation'
-      });
-      setLoginPending(false);
+        type: 'myLocation',
+      })
+      setLoginPending(false)
       setIsLoggedIn(true)
-      return callback(null);
+      return callback(null)
     } catch (error: any) {
-      setLoginPending(false);
+      setLoginPending(false)
       setLoginError(error?.response?.data || error)
-      return callback(error);
+      return callback(error)
     }
   }
 
-  const register = async (name: string, email: string, password: string, callback: Function, type?: string) => {
-    setLoginPending(true);
-    setLoginError(undefined);
+  const register = async (
+    name: string,
+    email: string,
+    password: string,
+    type: string | undefined,
+    callback: Function
+  ) => {
+    setLoginPending(true)
+    setLoginError(undefined)
 
     try {
       await api.post('/register', {
         username: name,
         email,
         password,
-        type
-      });
+        type,
+      })
 
-      setLoginPending(false);
-      return callback(null);
+      setLoginPending(false)
+      return callback(null)
     } catch (error: any) {
-      setLoginPending(false);
+      setLoginPending(false)
       setLoginError(error?.response?.data || error)
-      return callback(error);
+      return callback(error)
     }
   }
 
-  const logout = (callback: Function) => {
-    setLoginPending(false);
-    setIsLoggedIn(false)
-    setUser(undefined);
-    setLoginError(undefined);
-    return callback(null);
+  const logout = async (callback: Function) => {
+    try {
+      await api.post('/logout')
+    } finally {
+      setIsLoggedIn(false)
+      setUser(undefined)
+      setLoginError(undefined)
+      callback(null)
+    }
   }
 
   // Update user's location
   const setUserLocation = (location: LatLngExpression) => {
     if (user) {
-      setUser((prevUser) => prevUser ? ({
-        ...prevUser,
-        coordinates: location
-      }) : prevUser);
+      setUser((prevUser) =>
+        prevUser
+          ? {
+              ...prevUser,
+              coordinates: location,
+            }
+          : prevUser
+      )
     }
-  };
+  }
 
   return (
     <AuthContext.Provider
@@ -122,10 +144,10 @@ export const AuthContextProvider = ({ children }: PropsWithChildren<{}>) => {
         login,
         register,
         logout,
-        setUserLocation
+        setUserLocation,
       }}
     >
       {children}
     </AuthContext.Provider>
-  );
-};
+  )
+}
