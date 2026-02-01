@@ -29,8 +29,8 @@ vi.mock('./routes', () => ({
 // Replace App with a static shell so we never run createBrowserRouter. The real router
 // uses Request + AbortSignal in a way that fails in Node (jsdom's AbortSignal is not
 // accepted by undici's Request). These tests assert the same UI contract without running the router.
-vi.mock('./App', () => {
-  const React = require('react')
+vi.mock('./App', async () => {
+  const React = await vi.importActual<typeof import('react')>('react')
   return {
     default: function MockApp() {
       return React.createElement(
