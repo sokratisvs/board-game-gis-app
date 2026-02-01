@@ -7,21 +7,11 @@ pipeline {
       choices: ['staging', 'production'],
       description: 'Deployment environment'
     )
-    string(
-      name: 'BASE_PATH',
-      defaultValue: '',
-      description: 'Optional base path (e.g. boardgamesapp for path-based proxy). Leave empty for root.'
-    )
-    string(
-      name: 'PROXY_HOST',
-      defaultValue: 'http://sokratisvsproxy.tail272227.ts.net',
-      description: 'Proxy host URL when using BASE_PATH (e.g. NPM/LXC hostname). Used for CLIENT_URLS and REACT_APP_API_BASE_URL.'
-    )
   }
 
   stages {
 
-    stage('Init') {
+     stage('Init') {
       steps {
         script {
           if (params.TARGET_ENV == 'production') {
@@ -33,28 +23,15 @@ pipeline {
             env.CLIENT_URLS   = 'http://production-apps.tail272227.ts.net'
             env.REACT_APP_API_BASE_URL = 'http://production-apps.tail272227.ts.net/api'
           } else {
-            env.APP_DIR        = '/var/www/boardingapp/staging'
-            env.SSH_HOST       = 'deploy@staging-apps.tail272227.ts.net'
-            env.NODE_ENV       = 'staging'
-            env.FRONTEND_PORT  = '3000'
-            env.BACKEND_PORT   = '4000'
-            env.CLIENT_URLS    = 'http://staging-apps.tail272227.ts.net'
+            env.APP_DIR       = '/var/www/boardingapp/staging'
+            env.SSH_HOST      = 'deploy@staging-apps.tail272227.ts.net'
+            env.NODE_ENV      = 'staging'
+            env.FRONTEND_PORT = '3000'
+            env.BACKEND_PORT  = '4000'
+            env.CLIENT_URLS   = 'http://staging-apps.tail272227.ts.net'
             env.REACT_APP_API_BASE_URL = 'http://staging-apps.tail272227.ts.net/api'
           }
-          if (params.BASE_PATH?.trim()) {
-            def base = params.BASE_PATH.trim().replaceAll('^/+|/+$', '')
-            def path = base ? "/${base}" : ''
-            def proxyHost = (params.PROXY_HOST?.trim() ?: 'http://sokratisvsproxy.tail272227.ts.net').replaceAll('/+$', '')
-            env.BASE_PATH = path
-            env.REACT_APP_BASE_PATH = ''   // empty at build = path-agnostic; base path injected at runtime
-            env.PUBLIC_URL = ''            // empty at build so entrypoint rewrites asset URLs at runtime
-            env.CLIENT_URLS = "${proxyHost},${proxyHost}${path}"
-            env.REACT_APP_API_BASE_URL = "${proxyHost}${path}/api"
-          } else {
-            env.BASE_PATH = ''
-            env.REACT_APP_BASE_PATH = ''
-            env.PUBLIC_URL = ''
-          }
+
           env.COMPOSE_FILE = 'containers/docker-compose.yml'
         }
       }
@@ -69,10 +46,7 @@ pipeline {
     stage('Test SSH Connectivity') {
       steps {
         sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
-          sh '''
-            ssh -o BatchMode=yes -o ConnectTimeout=10 ${SSH_HOST} \
-            "whoami && hostname && mkdir -p ${APP_DIR}"
-          '''
+           sh "ssh ${SSH_HOST} 'whoami && hostname && mkdir -p ${APP_DIR}'"
         }
       }
     }
@@ -111,7 +85,8 @@ pipeline {
                 echo "📦 No data dir or empty — skipping backup"
               fi
 
-              find \$BACKUP_DIR -type f -name "pgsql-*.tar.gz" -mtime +7 -delete 2>/dev/null || true
+              # Retention: keep last 7 days
+              find "\$BACKUP_DIR" -type f -name "pgsql-*.tar.gz" -mtime +7 -delete || true
             '
           """
         }
@@ -142,9 +117,6 @@ FRONTEND_PORT=${env.FRONTEND_PORT}
 BACKEND_PORT=${env.BACKEND_PORT}
 CLIENT_URLS=${env.CLIENT_URLS}
 REACT_APP_API_BASE_URL=${env.REACT_APP_API_BASE_URL}
-REACT_APP_BASE_PATH=${env.REACT_APP_BASE_PATH}
-PUBLIC_URL=${env.PUBLIC_URL}
-BASE_PATH=${env.BASE_PATH}
 EOF
               '
             """
@@ -166,22 +138,11 @@ EOF
       steps {
         sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
           sh """
-            ssh -o BatchMode=yes -o ConnectTimeout=10 ${SSH_HOST} '
+            ssh ${SSH_HOST} '
               set -e
               cd ${APP_DIR}
               docker compose -f ${COMPOSE_FILE} --env-file .env down --remove-orphans || true
-              docker rm -f postgres backend frontend 2>/dev/null || true
-            '
-          """
-          sh """
-            ssh -o BatchMode=yes -o ConnectTimeout=10 ${SSH_HOST} '
-              cd ${APP_DIR} &&
               docker compose -f ${COMPOSE_FILE} --env-file .env build
-            '
-          """
-          sh """
-            ssh -o BatchMode=yes -o ConnectTimeout=10 ${SSH_HOST} '
-              cd ${APP_DIR} &&
               docker compose -f ${COMPOSE_FILE} --env-file .env up -d
             '
           """
@@ -203,17 +164,17 @@ EOF
             BACKUP_DIR=\$HOME/backups/boardingapp/${params.TARGET_ENV}
             DATA_DIR=${APP_DIR}/containers/postgres/data/pgsql
 
-            if [ -f "\$BACKUP_DIR/pgsql-latest.tar.gz" ]; then
-              echo "↩️ Restoring Postgres data from last backup..."
-              docker stop postgres 2>/dev/null || true
-              docker rm -f postgres 2>/dev/null || true
-              mkdir -p \$DATA_DIR
-              rm -rf \$DATA_DIR/*
-              tar -xzf \$BACKUP_DIR/pgsql-latest.tar.gz -C \$DATA_DIR
-              echo "✓ Restore done. Re-run the pipeline to deploy."
-            else
-              echo "⚠️ No backup found — skipping restore"
-            fi
+          if [ -f "\$BACKUP_DIR/pgsql-latest.tar.gz" ]; then
+            echo "↩️ Restoring Postgres data from last backup..."
+            docker stop postgres 2>/dev/null || true
+            docker rm -f postgres 2>/dev/null || true
+            mkdir -p \$DATA_DIR
+            rm -rf \$DATA_DIR/*
+            tar -xzf \$BACKUP_DIR/pgsql-latest.tar.gz -C \$DATA_DIR
+            echo "✓ Restore completed. Re-run the pipeline."
+          else
+            echo "⚠️ No backup found — skipping restore"
+          fi
           '
         """
       }
