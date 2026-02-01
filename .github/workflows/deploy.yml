@@ -27,13 +27,13 @@ jobs:
 
     env:
       TARGET_ENV: ${{ github.event.inputs.target_env || 'staging' }}
-      APP_DIR: ${{ github.event.inputs.target_env == 'production' && '/var/www/boardingapp/production' || '/var/www/boardingapp/staging' }}
+      APP_DIR: ${{ github.event.inputs.target_env == 'production' && '/var/www/boardgames/production' || '/var/www/boardgames/staging' }}
       SSH_HOST: ${{ github.event.inputs.target_env == 'production' && 'deploy@production-apps.tail272227.ts.net' || 'deploy@staging-apps.tail272227.ts.net' }}
       NODE_ENV: ${{ github.event.inputs.target_env == 'production' && 'production' || 'staging' }}
       FRONTEND_PORT: ${{ github.event.inputs.target_env == 'production' && '3001' || '3000' }}
       BACKEND_PORT: ${{ github.event.inputs.target_env == 'production' && '4001' || '4000' }}
       CLIENT_URLS: ${{ github.event.inputs.target_env == 'production' && 'http://production-apps.tail272227.ts.net' || 'http://staging-apps.tail272227.ts.net' }}
-      REACT_APP_API_BASE_URL: ${{ github.event.inputs.target_env == 'production' && 'http://production-apps.tail272227.ts.net/api' || 'http://staging-apps.tail272227.ts.net/api' }}
+      REACT_APP_API_BASE_URL: ${{ github.event.inputs.target_env == 'production' && 'http://production-apps.tail272227.ts.net:4001' || 'http://staging-apps.tail272227.ts.net:4000' }}
       COMPOSE_FILE: containers/docker-compose.yml
 
     steps:
@@ -77,7 +77,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o ConnectTimeout=10 ${{ env.SSH_HOST }} '
             set -e
-            BACKUP_DIR=$HOME/backups/boardingapp/${{ env.TARGET_ENV }}
+            BACKUP_DIR=$HOME/backups/boardgames/${{ env.TARGET_ENV }}
             DATA_DIR=${{ env.APP_DIR }}/containers/postgres/data/pgsql
             TS=$(date +%F-%H%M%S)
             mkdir -p "$BACKUP_DIR"
@@ -155,6 +155,6 @@ jobs:
         if: failure()
         run: |
           echo "❌ Deployment failed. On the VM, to restore DB from last backup:"
-          echo "  BACKUP_DIR=\$HOME/backups/boardingapp/${{ env.TARGET_ENV }}"
+          echo "  BACKUP_DIR=\$HOME/backups/boardgames/${{ env.TARGET_ENV }}"
           echo "  DATA_DIR=${{ env.APP_DIR }}/containers/postgres/data/pgsql"
           echo "  (stop postgres, empty DATA_DIR, then) tar -xzf \$BACKUP_DIR/pgsql-latest.tar.gz -C \$DATA_DIR"

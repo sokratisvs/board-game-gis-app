@@ -15,21 +15,21 @@ pipeline {
       steps {
         script {
           if (params.TARGET_ENV == 'production') {
-            env.APP_DIR       = '/var/www/boardingapp/production'
+            env.APP_DIR       = '/var/www/boardgames/production'
             env.SSH_HOST      = 'deploy@production-apps.tail272227.ts.net'
             env.NODE_ENV      = 'production'
             env.FRONTEND_PORT = '3001'
             env.BACKEND_PORT  = '4001'
             env.CLIENT_URLS   = 'http://production-apps.tail272227.ts.net'
-            env.REACT_APP_API_BASE_URL = 'http://production-apps.tail272227.ts.net/api'
+            env.REACT_APP_API_BASE_URL = 'http://production-apps.tail272227.ts.net:4001'
           } else {
-            env.APP_DIR       = '/var/www/boardingapp/staging'
+            env.APP_DIR       = '/var/www/boardgames/staging'
             env.SSH_HOST      = 'deploy@staging-apps.tail272227.ts.net'
             env.NODE_ENV      = 'staging'
             env.FRONTEND_PORT = '3000'
             env.BACKEND_PORT  = '4000'
             env.CLIENT_URLS   = 'http://staging-apps.tail272227.ts.net'
-            env.REACT_APP_API_BASE_URL = 'http://staging-apps.tail272227.ts.net/api'
+            env.REACT_APP_API_BASE_URL = 'http://staging-apps.tail272227.ts.net:4000'
           }
 
           env.COMPOSE_FILE = 'containers/docker-compose.yml'
@@ -71,7 +71,7 @@ pipeline {
           sh """
             ssh -o BatchMode=yes -o ConnectTimeout=10 ${SSH_HOST} '
               set -e
-              BACKUP_DIR=\$HOME/backups/boardingapp/${params.TARGET_ENV}
+              BACKUP_DIR=\$HOME/backups/boardgames/${params.TARGET_ENV}
               DATA_DIR=${APP_DIR}/containers/postgres/data/pgsql
               TS=\$(date +%F_%H-%M-%S)
 
@@ -161,7 +161,7 @@ EOF
         sh """
           ssh -o BatchMode=yes -o ConnectTimeout=10 ${SSH_HOST} '
             set -e
-            BACKUP_DIR=\$HOME/backups/boardingapp/${params.TARGET_ENV}
+            BACKUP_DIR=\$HOME/backups/boardgames/${params.TARGET_ENV}
             DATA_DIR=${APP_DIR}/containers/postgres/data/pgsql
 
           if [ -f "\$BACKUP_DIR/pgsql-latest.tar.gz" ]; then
