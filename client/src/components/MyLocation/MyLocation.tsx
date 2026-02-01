@@ -34,8 +34,8 @@ export default function MyLocation() {
             const accuracyRadius = e.accuracy;
             const circle = L.circle(e.latlng, accuracyRadius);
             circle.addTo(map);
-            // setBbox(e?.bounds.toBBoxString().split(","));
-            saveLocationRef.current(userIdRef.current, e.latlng);
+            const userId = userIdRef.current;
+            if (userId) saveLocationRef.current(userId, e.latlng);
             fetchUsersNearbyRef.current(e.latlng, accuracyRadius);
         });
     }, [map]);

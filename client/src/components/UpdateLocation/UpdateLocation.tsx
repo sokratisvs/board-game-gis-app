@@ -17,14 +17,13 @@ function UpdateLocationComponent() {
   }, [user, getLocation])
 
   const handleLocationUpdate = async () => {
-    if (location) {
-      setUserLocation(location)
-      const locationResponse: any = await getSavedLocation(user.userId)
-      const savedLocation = locationResponse?.data?.[0]?.coordinates
-      savedLocation
-        ? await updateLocation(user.userId, location)
-        : await saveLocation(user.userId, location)
-    }
+    if (!user || !location) return
+    setUserLocation(location)
+    const locationResponse: any = await getSavedLocation(user.userId)
+    const savedLocation = locationResponse?.data?.[0]?.coordinates
+    savedLocation
+      ? await updateLocation(user.userId, location)
+      : await saveLocation(user.userId, location)
   }
 
   return (
