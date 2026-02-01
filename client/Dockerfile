@@ -2,8 +2,8 @@
 # Build
 FROM node:20 as build
 WORKDIR /app
-ARG REACT_APP_API_BASE_URL
-ENV VITE_API_BASE_URL=${REACT_APP_API_BASE_URL}
+ARG VITE_API_BASE_URL=/api
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .

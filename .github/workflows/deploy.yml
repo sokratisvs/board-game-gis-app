@@ -40,6 +40,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate Docker compose (staging config)
+        run: |
+          export NODE_ENV=${{ env.NODE_ENV }} DB_USER=postgres DB_PASSWORD=placeholder DB_NAME=board_gis_db
+          export COOKIE_SECRET=placeholder CLIENT_URLS=${{ env.CLIENT_URLS }}
+          export FRONTEND_PORT=${{ env.FRONTEND_PORT }} BACKEND_PORT=${{ env.BACKEND_PORT }}
+          docker compose -f ${{ env.COMPOSE_FILE }} config --quiet
+
       - name: Install SSH key (staging)
         if: env.TARGET_ENV == 'staging'
         run: |
@@ -111,7 +118,8 @@ jobs:
           FRONTEND_PORT=${{ env.FRONTEND_PORT }}
           BACKEND_PORT=${{ env.BACKEND_PORT }}
           CLIENT_URLS=${{ env.CLIENT_URLS }}
-          REACT_APP_API_BASE_URL=${{ env.REACT_APP_API_BASE_URL }}
+          VITE_API_BASE_URL=${{ env.VITE_API_BASE_URL }}
+          VITE_BUILD_HASH=${{ env.BUILD_HASH }}
           EOF
 
       - name: Create .env (production)
@@ -134,7 +142,7 @@ jobs:
           FRONTEND_PORT=${{ env.FRONTEND_PORT }}
           BACKEND_PORT=${{ env.BACKEND_PORT }}
           CLIENT_URLS=${{ env.CLIENT_URLS }}
-          REACT_APP_API_BASE_URL=${{ env.REACT_APP_API_BASE_URL }}
+          VITE_API_BASE_URL=${{ env.VITE_API_BASE_URL }}
           EOF
 
       - name: Upload .env to VM
