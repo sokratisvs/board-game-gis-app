@@ -5,24 +5,19 @@ import Register from './components/Register/Register'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import childrenRoutes from './routes'
 import PathConstants from './routes/pathConstants'
-import { getBasePath } from './config/basePath'
 import './App.css'
 import Page404 from './components/Page404/Page404'
 
 const App = () => {
-  const basePath = getBasePath()
-  const router = createBrowserRouter(
-    [
-      {
-        element: <Layout />,
-        errorElement: <Page404 />,
-        children: childrenRoutes,
-      },
-      { path: PathConstants.LOGIN, element: <Login /> },
-      { path: PathConstants.REGISTER, element: <Register /> },
-    ],
-    { basename: basePath }
-  )
+  const router = createBrowserRouter([
+    {
+      element: <Layout />,
+      errorElement: <Page404 />,
+      children: childrenRoutes,
+    },
+    { path: PathConstants.LOGIN, element: <Login /> },
+    { path: PathConstants.REGISTER, element: <Register /> },
+  ])
 
   return (
     <div className="App">

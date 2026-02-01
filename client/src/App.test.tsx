@@ -4,7 +4,6 @@ import { AuthContextProvider } from './context/Auth.context'
 import { LocationProvider } from './context/Location.context'
 import { UsersContextProvider } from './context/Users.context'
 import App from './App'
-import { getBasePath } from './config/basePath'
 
 jest.mock('./api/axios', () => ({
   __esModule: true,
@@ -15,9 +14,20 @@ jest.mock('./api/axios', () => ({
   },
 }))
 
-jest.mock('./config/basePath', () => ({
-  getBasePath: jest.fn(() => ''),
-}))
+// Avoid Suspense act() warning: render routes synchronously instead of React.lazy
+jest.mock('./routes', () => {
+  const React = require('react')
+  return {
+    __esModule: true,
+    default: [
+      {
+        path: '/',
+        element: React.createElement('div', null, 'Board Game App'),
+      },
+      { path: 'users', element: React.createElement('div', null, 'Users') },
+    ],
+  }
+})
 
 const renderAppWithProviders = () =>
   render(
@@ -31,27 +41,15 @@ const renderAppWithProviders = () =>
   )
 
 describe('App', () => {
-  test('renders app title', () => {
+  test('renders app title', async () => {
     renderAppWithProviders()
-    const titleElement = screen.getByText(/Board Game App/i)
+    const titleElement = await screen.findByText(/Board Game App/i)
     expect(titleElement).toBeInTheDocument()
   })
 
-  describe('BASE_PATH / basename', () => {
-    test('when base path is set, login page Register link includes base path in href', () => {
-      ;(getBasePath as jest.Mock).mockReturnValue('/boardgamesapp')
-      window.history.replaceState({}, '', '/boardgamesapp/login')
-      renderAppWithProviders()
-      const registerLink = screen.getByRole('link', { name: /register/i })
-      expect(registerLink).toHaveAttribute('href', '/boardgamesapp/register')
-    })
-
-    test('when base path is empty, login page Register link has href "/register"', () => {
-      ;(getBasePath as jest.Mock).mockReturnValue('')
-      window.history.replaceState({}, '', '/login')
-      renderAppWithProviders()
-      const registerLink = screen.getByRole('link', { name: /register/i })
-      expect(registerLink).toHaveAttribute('href', '/register')
-    })
+  test('login page has Register link with href /register', async () => {
+    renderAppWithProviders()
+    const registerLink = await screen.findByRole('link', { name: /register/i })
+    expect(registerLink).toHaveAttribute('href', '/register')
   })
 })
