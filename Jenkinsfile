@@ -78,14 +78,15 @@ pipeline {
       steps {
         sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
           sh """
-            ssh -o BatchMode=yes -o ConnectTimeout=10 ${SSH_HOST} '
+            ssh -o BatchMode=yes -o ConnectTimeout=10 ${env.SSH_HOST} '
               set -e
+              APP_DIR="${env.APP_DIR}"
               echo "Checking key files on VM..."
-              test -f ${APP_DIR}/containers/docker-compose.yml || { echo "Missing docker-compose.yml"; exit 1; }
-              test -f ${APP_DIR}/containers/postgres/scripts/run-migrations.sh || { echo "Missing run-migrations.sh"; exit 1; }
-              test -f ${APP_DIR}/containers/postgres/migrations/001_user_boardgames_config.sql || { echo "Missing migration 001"; exit 1; }
-              grep -q "migrate:" ${APP_DIR}/containers/docker-compose.yml || { echo "docker-compose.yml missing migrate service"; exit 1; }
-              grep -q "VITE_API_BASE_URL" ${APP_DIR}/containers/docker-compose.yml || { echo "docker-compose.yml missing VITE_API_BASE_URL"; exit 1; }
+              test -f "\${APP_DIR}/containers/docker-compose.yml" || { echo "Missing docker-compose.yml"; exit 1; }
+              test -f "\${APP_DIR}/containers/postgres/scripts/run-migrations.sh" || { echo "Missing run-migrations.sh"; exit 1; }
+              test -f "\${APP_DIR}/containers/postgres/migrations/001_user_boardgames_config.sql" || { echo "Missing migration 001"; exit 1; }
+              grep -q "migrate:" "\${APP_DIR}/containers/docker-compose.yml" || { echo "docker-compose.yml missing migrate service"; exit 1; }
+              grep -qE "VITE_API_BASE_URL|REACT_APP_API_BASE_URL" "\${APP_DIR}/containers/docker-compose.yml" || { echo "docker-compose.yml missing frontend API base URL (VITE_ or REACT_APP_)"; exit 1; }
               echo "All key files present."
             '
           """
@@ -166,16 +167,14 @@ EOF
       steps {
         sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
           sh """
-            ssh ${SSH_HOST} '
+            ssh ${env.SSH_HOST} '
               set -e
-              cd ${APP_DIR}
-              docker compose -f ${COMPOSE_FILE} --env-file .env down --remove-orphans || true
-              CLEAN_BUILD="${params.CLEAN_BUILD}"
+              cd ${env.APP_DIR}
+              docker compose -f ${env.COMPOSE_FILE} --env-file .env down --remove-orphans || true
               BUILD_OPTS=""
-              [ "$CLEAN_BUILD" = "true" ] && BUILD_OPTS="--no-cache"
-              docker compose -f ${COMPOSE_FILE} --env-file .env build $BUILD_OPTS
-              # Migrations run automatically via the migrate service before backend starts
-              docker compose -f ${COMPOSE_FILE} --env-file .env up -d
+              [ "${params.CLEAN_BUILD ?: false}" = "true" ] && BUILD_OPTS="--no-cache"
+              docker compose -f ${env.COMPOSE_FILE} --env-file .env build \$BUILD_OPTS
+              docker compose -f ${env.COMPOSE_FILE} --env-file .env up -d
             '
           """
         }
