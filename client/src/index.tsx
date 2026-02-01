@@ -8,6 +8,7 @@ import { AuthContextProvider } from './context/Auth.context'
 import { LocationProvider } from './context/Location.context'
 import { UsersContextProvider } from './context/Users.context'
 
+;(window as any).__BUILD_HASH__ = import.meta.env.VITE_BUILD_HASH ?? 'unknown'
 console.log('Frontend build:', import.meta.env.VITE_BUILD_HASH)
 
 const queryClient = new QueryClient({
