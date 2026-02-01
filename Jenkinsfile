@@ -7,6 +7,11 @@ pipeline {
       choices: ['staging', 'production'],
       description: 'Deployment environment'
     )
+    booleanParam(
+      name: 'CLEAN_BUILD',
+      defaultValue: false,
+      description: 'Build with --no-cache (use when Docker/compose changes are not applied)'
+    )
   }
 
   stages {
@@ -40,6 +45,10 @@ pipeline {
     stage('Checkout') {
       steps {
         checkout scm
+        sh '''
+          echo "📌 Deploying from branch: ${GIT_BRANCH:-unknown}"
+          echo "📌 Commit: $(git rev-parse --short HEAD) $(git log -1 --oneline)"
+        '''
       }
     }
 
@@ -61,6 +70,25 @@ pipeline {
               --exclude containers/postgres/data \
               ./ ${SSH_HOST}:${APP_DIR}/
           '''
+        }
+      }
+    }
+
+    stage('Verify synced files on VM') {
+      steps {
+        sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
+          sh """
+            ssh -o BatchMode=yes -o ConnectTimeout=10 ${SSH_HOST} '
+              set -e
+              echo "Checking key files on VM..."
+              test -f ${APP_DIR}/containers/docker-compose.yml || { echo "Missing docker-compose.yml"; exit 1; }
+              test -f ${APP_DIR}/containers/postgres/scripts/run-migrations.sh || { echo "Missing run-migrations.sh"; exit 1; }
+              test -f ${APP_DIR}/containers/postgres/migrations/001_user_boardgames_config.sql || { echo "Missing migration 001"; exit 1; }
+              grep -q "migrate:" ${APP_DIR}/containers/docker-compose.yml || { echo "docker-compose.yml missing migrate service"; exit 1; }
+              grep -q "VITE_API_BASE_URL" ${APP_DIR}/containers/docker-compose.yml || { echo "docker-compose.yml missing VITE_API_BASE_URL"; exit 1; }
+              echo "All key files present."
+            '
+          """
         }
       }
     }
@@ -142,7 +170,10 @@ EOF
               set -e
               cd ${APP_DIR}
               docker compose -f ${COMPOSE_FILE} --env-file .env down --remove-orphans || true
-              docker compose -f ${COMPOSE_FILE} --env-file .env build
+              CLEAN_BUILD="${params.CLEAN_BUILD}"
+              BUILD_OPTS=""
+              [ "$CLEAN_BUILD" = "true" ] && BUILD_OPTS="--no-cache"
+              docker compose -f ${COMPOSE_FILE} --env-file .env build $BUILD_OPTS
               # Migrations run automatically via the migrate service before backend starts
               docker compose -f ${COMPOSE_FILE} --env-file .env up -d
             '
