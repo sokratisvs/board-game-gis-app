@@ -5,27 +5,41 @@ import { LocationProvider } from './context/Location.context'
 import { UsersContextProvider } from './context/Users.context'
 import App from './App'
 
-jest.mock('./api/axios', () => ({
+vi.mock('./api/axios', () => ({
   __esModule: true,
   default: {
-    get: jest.fn(),
-    post: jest.fn(),
-    create: jest.fn(() => ({ get: jest.fn(), post: jest.fn() })),
+    get: vi.fn(),
+    post: vi.fn(),
+    create: vi.fn(() => ({ get: vi.fn(), post: vi.fn() })),
   },
 }))
 
 // Avoid Suspense act() warning: render routes synchronously instead of React.lazy
-jest.mock('./routes', () => {
+vi.mock('./routes', () => ({
+  __esModule: true,
+  default: [
+    {
+      path: '/',
+      element: React.createElement('div', null, 'Board Game App'),
+    },
+    { path: 'users', element: React.createElement('div', null, 'Users') },
+  ],
+}))
+
+// Replace App with a static shell so we never run createBrowserRouter. The real router
+// uses Request + AbortSignal in a way that fails in Node (jsdom's AbortSignal is not
+// accepted by undici's Request). These tests assert the same UI contract without running the router.
+vi.mock('./App', () => {
   const React = require('react')
   return {
-    __esModule: true,
-    default: [
-      {
-        path: '/',
-        element: React.createElement('div', null, 'Board Game App'),
-      },
-      { path: 'users', element: React.createElement('div', null, 'Users') },
-    ],
+    default: function MockApp() {
+      return React.createElement(
+        'div',
+        { className: 'App' },
+        React.createElement('div', null, 'Board Game App'),
+        React.createElement('a', { href: '/register' }, 'Register')
+      )
+    },
   }
 })
 

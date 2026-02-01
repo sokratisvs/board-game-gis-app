@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import Sidebar from './Sidebar'
 
 const renderSidebar = (open = true) => {
-  const onToggle = jest.fn()
+  const onToggle = vi.fn()
   const result = render(
     <MemoryRouter>
       <Sidebar open={open} onToggle={onToggle} />
@@ -16,10 +16,21 @@ const renderSidebar = (open = true) => {
 describe('Sidebar', () => {
   test('renders navigation with Map View, Users, Settings links', () => {
     renderSidebar()
-    expect(screen.getByRole('navigation', { name: /primary/i })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /map view/i })).toHaveAttribute('href', '/')
-    expect(screen.getByRole('link', { name: /users/i })).toHaveAttribute('href', '/users')
-    expect(screen.getByRole('link', { name: /settings/i })).toHaveAttribute('href', '/settings')
+    expect(
+      screen.getByRole('navigation', { name: /primary/i })
+    ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /map view/i })).toHaveAttribute(
+      'href',
+      '/'
+    )
+    expect(screen.getByRole('link', { name: /users/i })).toHaveAttribute(
+      'href',
+      '/users'
+    )
+    expect(screen.getByRole('link', { name: /settings/i })).toHaveAttribute(
+      'href',
+      '/settings'
+    )
   })
 
   test('shows Board Game GIS title when open', () => {
@@ -37,6 +48,8 @@ describe('Sidebar', () => {
 
   test('when closed, toggle button has expand label', () => {
     renderSidebar(false)
-    expect(screen.getByRole('button', { name: /expand sidebar/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /expand sidebar/i })
+    ).toBeInTheDocument()
   })
 })

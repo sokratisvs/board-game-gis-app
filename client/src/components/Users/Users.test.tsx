@@ -3,8 +3,8 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import Users from './Users'
 
-const mockFetchUsers = jest.fn()
-const mockToggleUserActive = jest.fn()
+const mockFetchUsers = vi.fn()
+const mockToggleUserActive = vi.fn()
 
 const defaultUseUsersReturn = {
   users: [
@@ -33,14 +33,14 @@ const defaultUseUsersReturn = {
   usersLoading: false,
   usersError: null,
   fetchUsers: mockFetchUsers,
-  fetchUsersNearby: jest.fn(),
+  fetchUsersNearby: vi.fn(),
   toggleUserActive: mockToggleUserActive,
-  clearUsers: jest.fn(),
-  clearNearbyUsers: jest.fn(),
+  clearUsers: vi.fn(),
+  clearNearbyUsers: vi.fn(),
 }
 
-const mockUseUsers = jest.fn(() => defaultUseUsersReturn)
-jest.mock('../../context/Users.context', () => ({
+const mockUseUsers = vi.fn(() => defaultUseUsersReturn)
+vi.mock('../../context/Users.context', () => ({
   useUsers: () => mockUseUsers(),
 }))
 
@@ -51,7 +51,7 @@ const renderUsers = (overrides = {}) => {
 
 describe('Users', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   test('renders Users heading', () => {
@@ -71,8 +71,12 @@ describe('Users', () => {
   test('renders filter buttons All Users, Active Only, Inactive Only', () => {
     renderUsers()
     const allUsersBtn = screen.getAllByRole('button', { name: /all users/i })[0]
-    const activeOnlyBtn = screen.getAllByRole('button', { name: /^active only$/i })[0]
-    const inactiveOnlyBtn = screen.getAllByRole('button', { name: /^inactive only$/i })[0]
+    const activeOnlyBtn = screen.getAllByRole('button', {
+      name: /^active only$/i,
+    })[0]
+    const inactiveOnlyBtn = screen.getAllByRole('button', {
+      name: /^inactive only$/i,
+    })[0]
     expect(allUsersBtn).toBeInTheDocument()
     expect(activeOnlyBtn).toBeInTheDocument()
     expect(inactiveOnlyBtn).toBeInTheDocument()
@@ -102,7 +106,9 @@ describe('Users', () => {
 
   test('calls fetchUsers with active filter when Active Only clicked', async () => {
     renderUsers()
-    const activeOnlyBtn = screen.getAllByRole('button', { name: /^active only$/i })[0]
+    const activeOnlyBtn = screen.getAllByRole('button', {
+      name: /^active only$/i,
+    })[0]
     await userEvent.click(activeOnlyBtn)
     expect(mockFetchUsers).toHaveBeenCalledWith({
       page: 1,
@@ -128,7 +134,9 @@ describe('Users', () => {
 
   test('renders pagination when totalPages > 1', () => {
     renderUsers()
-    expect(screen.getByRole('button', { name: /previous/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /previous/i })
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /next/i })).toBeInTheDocument()
     expect(screen.getByText(/page 1 of 2/i)).toBeInTheDocument()
   })

@@ -5,21 +5,23 @@ import { MemoryRouter } from 'react-router-dom'
 import Main from './Main'
 import { AuthContext } from '../../context/Auth.context'
 
-jest.mock('../../api/axios', () => ({
+vi.mock('../../api/axios', () => ({
   __esModule: true,
-  default: { get: jest.fn(), post: jest.fn() },
+  default: { get: vi.fn(), post: vi.fn() },
 }))
 
-jest.mock('../MapComponent/MapComponent', () => {
-  return function MockMapComponent() {
+vi.mock('../MapComponent/MapComponent', () => ({
+  default: function MockMapComponent() {
     return <div data-testid="map-component">Map</div>
-  }
-})
+  },
+}))
 
-const mockNavigate = jest.fn()
-const mockLogout = jest.fn()
-jest.mock('react-router-dom', () => ({
-  ...jest.requireActual('react-router-dom'),
+const mockNavigate = vi.fn()
+const mockLogout = vi.fn()
+vi.mock('react-router-dom', async () => ({
+  ...(await vi.importActual<typeof import('react-router-dom')>(
+    'react-router-dom'
+  )),
   useNavigate: () => mockNavigate,
 }))
 
@@ -33,14 +35,14 @@ const defaultContext = {
   isLoggedIn: true,
   loginPending: false,
   loginError: undefined,
-  setUser: jest.fn(),
-  setIsLoggedIn: jest.fn(),
-  setLoginPending: jest.fn(),
-  setLoginError: jest.fn(),
-  register: jest.fn(),
-  login: jest.fn(),
+  setUser: vi.fn(),
+  setIsLoggedIn: vi.fn(),
+  setLoginPending: vi.fn(),
+  setLoginError: vi.fn(),
+  register: vi.fn(),
+  login: vi.fn(),
   logout: mockLogout,
-  setUserLocation: jest.fn(),
+  setUserLocation: vi.fn(),
 }
 
 const renderMain = (overrides = {}) => {
@@ -56,7 +58,7 @@ const renderMain = (overrides = {}) => {
 
 describe('Main', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   test('renders greeting with username', () => {

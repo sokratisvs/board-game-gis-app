@@ -5,16 +5,16 @@ import UpdateLocation from './UpdateLocation'
 import { AuthContext } from '../../context/Auth.context'
 import { LocationContext } from '../../context/Location.context'
 
-jest.mock('../../api/axios', () => ({
+vi.mock('../../api/axios', () => ({
   __esModule: true,
-  default: { get: jest.fn(), post: jest.fn() },
+  default: { get: vi.fn(), post: vi.fn() },
 }))
 
-const mockGetLocation = jest.fn()
-const mockGetSavedLocation = jest.fn()
-const mockSaveLocation = jest.fn()
-const mockUpdateLocation = jest.fn()
-const mockSetUserLocation = jest.fn()
+const mockGetLocation = vi.fn()
+const mockGetSavedLocation = vi.fn()
+const mockSaveLocation = vi.fn()
+const mockUpdateLocation = vi.fn()
+const mockSetUserLocation = vi.fn()
 
 const defaultAuthContext = {
   user: {
@@ -26,13 +26,13 @@ const defaultAuthContext = {
   isLoggedIn: true,
   loginPending: false,
   loginError: undefined,
-  setUser: jest.fn(),
-  setIsLoggedIn: jest.fn(),
-  setLoginPending: jest.fn(),
-  setLoginError: jest.fn(),
-  register: jest.fn(),
-  login: jest.fn(),
-  logout: jest.fn(),
+  setUser: vi.fn(),
+  setIsLoggedIn: vi.fn(),
+  setLoginPending: vi.fn(),
+  setLoginError: vi.fn(),
+  register: vi.fn(),
+  login: vi.fn(),
+  logout: vi.fn(),
   setUserLocation: mockSetUserLocation,
 }
 
@@ -60,7 +60,7 @@ const renderUpdateLocation = (authOverrides = {}, locationOverrides = {}) => {
 
 describe('UpdateLocation', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     mockGetSavedLocation.mockResolvedValue({ data: [] })
   })
 
