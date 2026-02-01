@@ -10,7 +10,7 @@ pipeline {
     booleanParam(
       name: 'CLEAN_BUILD',
       defaultValue: false,
-      description: 'Build with --no-cache (use when Docker/compose changes are not applied)'
+      description: 'Force backend rebuild with --no-cache'
     )
   }
 
@@ -19,6 +19,15 @@ pipeline {
     stage('Clean Jenkins Workspace') {
       steps {
         deleteDir()
+      }
+    }
+
+    stage('Checkout') {
+      steps {
+        checkout scm
+        sh '''
+          echo "📌 Commit: $(git rev-parse --short HEAD) $(git log -1 --oneline)"
+        '''
       }
     }
 
@@ -49,19 +58,6 @@ pipeline {
       }
     }
 
-    stage('Checkout') {
-      steps {
-        checkout scm
-        script {
-          env.BUILD_HASH = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-        }
-        sh '''
-          echo "📌 Deploying from branch: ${GIT_BRANCH:-unknown}"
-          echo "📌 Commit: $(git rev-parse --short HEAD) $(git log -1 --oneline)"
-        '''
-      }
-    }
-
     stage('Test SSH Connectivity') {
       steps {
         sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
@@ -73,13 +69,13 @@ pipeline {
     stage('Sync files to VM') {
       steps {
         sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
-          sh """
+          sh '''
             rsync -az --delete \
-              --exclude node_modules \
               --exclude .git \
+              --exclude node_modules \
               --exclude containers/postgres/data \
-              ./ ${env.SSH_HOST}:${env.APP_DIR}/
-          """
+              ./ ${SSH_HOST}:${APP_DIR}/
+          '''
         }
       }
     }
@@ -88,16 +84,12 @@ pipeline {
       steps {
         sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
           sh """
-            ssh -o BatchMode=yes -o ConnectTimeout=10 ${env.SSH_HOST} '
+            ssh ${env.SSH_HOST} '
               set -e
-              APP_DIR="${env.APP_DIR}"
-              echo "Checking key files on VM..."
-              test -f "\${APP_DIR}/containers/docker-compose.yml" || { echo "Missing docker-compose.yml"; exit 1; }
-              test -f "\${APP_DIR}/containers/postgres/scripts/run-migrations.sh" || { echo "Missing run-migrations.sh"; exit 1; }
-              test -f "\${APP_DIR}/containers/postgres/migrations/001_user_boardgames_config.sql" || { echo "Missing migration 001"; exit 1; }
-              grep -q "migrate:" "\${APP_DIR}/containers/docker-compose.yml" || { echo "docker-compose.yml missing migrate service"; exit 1; }
-              grep -qE "VITE_API_BASE_URL|REACT_APP_API_BASE_URL" "\${APP_DIR}/containers/docker-compose.yml" || { echo "docker-compose.yml missing frontend API base URL (VITE_ or REACT_APP_)"; exit 1; }
-              echo "All key files present."
+              test -f "${env.APP_DIR}/docker-compose.yml" || { echo "Missing docker-compose.yml"; exit 1; }
+              grep -q "frontend:" "${env.APP_DIR}/docker-compose.yml" || { echo "Missing frontend service"; exit 1; }
+              grep -q "backend:" "${env.APP_DIR}/docker-compose.yml" || { echo "Missing backend service"; exit 1; }
+              echo "✓ docker-compose.yml verified"
             '
           """
         }
@@ -108,7 +100,7 @@ pipeline {
       steps {
         sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
           sh """
-            ssh -o BatchMode=yes -o ConnectTimeout=10 ${env.SSH_HOST} '
+            ssh ${env.SSH_HOST} '
               set -e
               BACKUP_DIR=\$HOME/backups/boardgames/${params.TARGET_ENV}
               DATA_DIR=${env.APP_DIR}/containers/postgres/data/pgsql
@@ -117,14 +109,12 @@ pipeline {
               mkdir -p "\$BACKUP_DIR"
 
               if [ -d "\$DATA_DIR" ] && [ -n "\$(ls -A \$DATA_DIR 2>/dev/null)" ]; then
-                echo "📦 Backing up Postgres data..."
                 tar -czf \$BACKUP_DIR/pgsql-\$TS.tar.gz -C \$DATA_DIR .
                 ln -sfn \$BACKUP_DIR/pgsql-\$TS.tar.gz \$BACKUP_DIR/pgsql-latest.tar.gz
               else
-                echo "📦 No data dir or empty — skipping backup"
+                echo "📦 No DB data — skipping backup"
               fi
 
-              # Retention: keep last 7 days
               find "\$BACKUP_DIR" -type f -name "pgsql-*.tar.gz" -mtime +7 -delete || true
             '
           """
@@ -140,7 +130,7 @@ pipeline {
         ]) {
           sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
             sh """
-              ssh -o BatchMode=yes -o ConnectTimeout=10 ${env.SSH_HOST} '
+              ssh ${env.SSH_HOST} '
                 cat > ${env.APP_DIR}/.env << EOF
 NODE_ENV=${env.NODE_ENV}
 
@@ -155,8 +145,8 @@ COOKIE_SECRET=${COOKIE_SECRET}
 FRONTEND_PORT=${env.FRONTEND_PORT}
 BACKEND_PORT=${env.BACKEND_PORT}
 CLIENT_URLS=${env.CLIENT_URLS}
-REACT_APP_API_BASE_URL=${env.REACT_APP_API_BASE_URL}
 
+VITE_API_BASE_URL=/api
 VITE_BUILD_HASH=${env.BUILD_HASH}
 EOF
               '
@@ -179,9 +169,9 @@ EOF
       steps {
         sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
           sh """
-            ssh ${SSH_HOST} '
+            ssh ${env.SSH_HOST} '
               set -e
-              cd ${APP_DIR}
+              cd ${env.APP_DIR}
 
               echo "🧹 Stopping containers..."
               docker compose down --remove-orphans || true
@@ -208,21 +198,17 @@ EOF
       steps {
         sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
           sh """
-            ssh ${SSH_HOST} '
+            ssh ${env.SSH_HOST} '
               set -e
-              echo "🔎 Waiting for containers to become healthy..."
-
               for i in {1..20}; do
                 UNHEALTHY=\$(docker ps --filter "health=unhealthy" --format "{{.Names}}")
                 if [ -z "\$UNHEALTHY" ]; then
                   echo "✅ All containers healthy"
                   exit 0
                 fi
-                echo "⏳ Still unhealthy: \$UNHEALTHY"
                 sleep 5
               done
-
-              echo "❌ Containers did not become healthy in time"
+              echo "❌ Containers unhealthy"
               docker ps
               exit 1
             '
@@ -238,27 +224,6 @@ EOF
     }
     failure {
       echo "❌ ${params.TARGET_ENV.toUpperCase()} deployment failed"
-      sshagent(["deploy-ssh-${params.TARGET_ENV}"]) {
-        sh """
-          ssh -o BatchMode=yes -o ConnectTimeout=10 ${env.SSH_HOST} '
-            set -e
-            BACKUP_DIR=\$HOME/backups/boardgames/${params.TARGET_ENV}
-            DATA_DIR=${env.APP_DIR}/containers/postgres/data/pgsql
-
-          if [ -f "\$BACKUP_DIR/pgsql-latest.tar.gz" ]; then
-            echo "↩️ Restoring Postgres data from last backup..."
-            docker stop postgres 2>/dev/null || true
-            docker rm -f postgres 2>/dev/null || true
-            mkdir -p \$DATA_DIR
-            rm -rf \$DATA_DIR/*
-            tar -xzf \$BACKUP_DIR/pgsql-latest.tar.gz -C \$DATA_DIR
-            echo "✓ Restore completed. Re-run the pipeline."
-          else
-            echo "⚠️ No backup found — skipping restore"
-          fi
-          '
-        """
-      }
     }
   }
 }
