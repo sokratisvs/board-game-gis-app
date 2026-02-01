@@ -20,16 +20,16 @@ pipeline {
             env.NODE_ENV      = 'production'
             env.FRONTEND_PORT = '3001'
             env.BACKEND_PORT  = '4001'
-            env.CLIENT_URLS   = 'http://production-apps.tail272227.ts.net'
-            env.REACT_APP_API_BASE_URL = 'http://production-apps.tail272227.ts.net:4001'
+            env.CLIENT_URLS   = 'http://production-apps.tail272227.ts.net:${FRONTEND_PORT}'
+            env.REACT_APP_API_BASE_URL = 'http://production-apps.tail272227.ts.net:${BACKEND_PORT}'
           } else {
             env.APP_DIR       = '/var/www/boardgames/staging'
             env.SSH_HOST      = 'deploy@staging-apps.tail272227.ts.net'
             env.NODE_ENV      = 'staging'
             env.FRONTEND_PORT = '3000'
             env.BACKEND_PORT  = '4000'
-            env.CLIENT_URLS   = 'http://staging-apps.tail272227.ts.net'
-            env.REACT_APP_API_BASE_URL = 'http://staging-apps.tail272227.ts.net:4000'
+            env.CLIENT_URLS   = 'http://staging-apps.tail272227.ts.net:${FRONTEND_PORT}'
+            env.REACT_APP_API_BASE_URL = 'http://staging-apps.tail272227.ts.net:${BACKEND_PORT}'
           }
 
           env.COMPOSE_FILE = 'containers/docker-compose.yml'
