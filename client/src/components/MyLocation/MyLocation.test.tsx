@@ -64,7 +64,7 @@ const defaultAuth = {
   user: {
     userId: '1',
     username: 'Test',
-    coordinates: [40.5, 21.6],
+    coordinates: [40.5, 21.6] as [number, number],
     type: 'myLocation' as const,
   },
   isLoggedIn: true,
