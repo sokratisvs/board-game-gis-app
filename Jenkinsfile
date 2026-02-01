@@ -16,6 +16,12 @@ pipeline {
 
   stages {
 
+    stage('Clean Jenkins Workspace') {
+      steps {
+        deleteDir()
+      }
+    }
+
      stage('Init') {
       steps {
         script {
