@@ -195,6 +195,7 @@ EOF
         }
       }
     }
+  }
 
   post {
     success {
