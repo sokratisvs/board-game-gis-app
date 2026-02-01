@@ -4,32 +4,34 @@ import { MemoryRouter } from 'react-router-dom'
 import Register from './Register'
 import { AuthContext } from '../../context/Auth.context'
 
-jest.mock('../../api/axios', () => ({
+vi.mock('../../api/axios', () => ({
   __esModule: true,
-  default: { get: jest.fn(), post: jest.fn() },
+  default: { get: vi.fn(), post: vi.fn() },
 }))
 
-const mockNavigate = jest.fn()
-jest.mock('react-router-dom', () => ({
-  ...jest.requireActual('react-router-dom'),
+const mockNavigate = vi.fn()
+vi.mock('react-router-dom', async () => ({
+  ...(await vi.importActual<typeof import('react-router-dom')>(
+    'react-router-dom'
+  )),
   useNavigate: () => mockNavigate,
 }))
 
-const mockRegister = jest.fn()
+const mockRegister = vi.fn()
 
 const defaultContext = {
   user: undefined,
   isLoggedIn: false,
   loginPending: false,
   loginError: undefined,
-  setUser: jest.fn(),
-  setIsLoggedIn: jest.fn(),
-  setLoginPending: jest.fn(),
-  setLoginError: jest.fn(),
+  setUser: vi.fn(),
+  setIsLoggedIn: vi.fn(),
+  setLoginPending: vi.fn(),
+  setLoginError: vi.fn(),
   register: mockRegister,
-  login: jest.fn(),
-  logout: jest.fn(),
-  setUserLocation: jest.fn(),
+  login: vi.fn(),
+  logout: vi.fn(),
+  setUserLocation: vi.fn(),
 }
 
 const renderRegister = (overrides = {}) => {
@@ -45,7 +47,7 @@ const renderRegister = (overrides = {}) => {
 
 describe('Register', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   test('renders register form with name, email, password, and type select', () => {

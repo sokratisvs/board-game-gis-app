@@ -4,14 +4,14 @@ import MyLocation from './MyLocation'
 import { AuthContext } from '../../context/Auth.context'
 import { LocationContext } from '../../context/Location.context'
 
-jest.mock('../../api/axios', () => ({
+vi.mock('../../api/axios', () => ({
   __esModule: true,
-  default: { get: jest.fn(), post: jest.fn() },
+  default: { get: vi.fn(), post: vi.fn() },
 }))
 
 const mockMap = {
-  locate: jest.fn().mockReturnValue({
-    on: jest.fn(
+  locate: vi.fn().mockReturnValue({
+    on: vi.fn(
       (
         event: string,
         cb: (e: { latlng: [number, number]; accuracy: number }) => void
@@ -22,41 +22,41 @@ const mockMap = {
       }
     ),
   }),
-  flyTo: jest.fn(),
-  getZoom: jest.fn(() => 15),
-  addLayer: jest.fn(),
+  flyTo: vi.fn(),
+  getZoom: vi.fn(() => 15),
+  addLayer: vi.fn(),
 }
 
-jest.mock('react-leaflet', () => ({
+vi.mock('react-leaflet', () => ({
   useMap: () => mockMap,
   Popup: ({ children }: { children?: React.ReactNode }) => (
     <div data-testid="popup">{children}</div>
   ),
 }))
 
-jest.mock('../LocationMarker/LocationMarker', () => {
-  return function MockLocationMarker({ name }: { name?: string }) {
+vi.mock('../LocationMarker/LocationMarker', () => ({
+  default: function MockLocationMarker({ name }: { name?: string }) {
     return <div data-testid="location-marker">{name}</div>
-  }
-})
+  },
+}))
 
-const mockSaveLocation = jest.fn()
-const mockFetchUsersNearby = jest.fn()
+const mockSaveLocation = vi.fn()
+const mockFetchUsersNearby = vi.fn()
 
-jest.mock('../../context/Users.context', () => ({
+vi.mock('../../context/Users.context', () => ({
   useUsers: () => ({
     fetchUsersNearby: mockFetchUsersNearby,
     nearbyUsers: [],
-    fetchUsers: jest.fn(),
+    fetchUsers: vi.fn(),
     users: [],
     usersPagination: null,
     usersLoading: false,
     usersError: null,
     nearbyLoading: false,
     nearbyError: null,
-    toggleUserActive: jest.fn(),
-    clearUsers: jest.fn(),
-    clearNearbyUsers: jest.fn(),
+    toggleUserActive: vi.fn(),
+    clearUsers: vi.fn(),
+    clearNearbyUsers: vi.fn(),
   }),
 }))
 
@@ -70,24 +70,24 @@ const defaultAuth = {
   isLoggedIn: true,
   loginPending: false,
   loginError: undefined,
-  setUser: jest.fn(),
-  setIsLoggedIn: jest.fn(),
-  setLoginPending: jest.fn(),
-  setLoginError: jest.fn(),
-  register: jest.fn(),
-  login: jest.fn(),
-  logout: jest.fn(),
-  setUserLocation: jest.fn(),
+  setUser: vi.fn(),
+  setIsLoggedIn: vi.fn(),
+  setLoginPending: vi.fn(),
+  setLoginError: vi.fn(),
+  register: vi.fn(),
+  login: vi.fn(),
+  logout: vi.fn(),
+  setUserLocation: vi.fn(),
 }
 
 const defaultLocation = {
   location: null,
   loading: false,
   error: null,
-  getLocation: jest.fn(),
-  getSavedLocation: jest.fn(),
+  getLocation: vi.fn(),
+  getSavedLocation: vi.fn(),
   saveLocation: mockSaveLocation,
-  updateLocation: jest.fn(),
+  updateLocation: vi.fn(),
 }
 
 const renderMyLocation = () => {
@@ -110,9 +110,9 @@ const renderMyLocation = () => {
 
 describe('MyLocation', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     mockMap.locate.mockReturnValue({
-      on: jest.fn(
+      on: vi.fn(
         (
           event: string,
           cb: (e: { latlng: [number, number]; accuracy: number }) => void

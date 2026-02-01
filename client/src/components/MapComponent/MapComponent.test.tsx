@@ -2,46 +2,52 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import MapComponent from './MapComponent'
 
-jest.mock('../../api/axios', () => ({
+vi.mock('../../api/axios', () => ({
   __esModule: true,
-  default: { get: jest.fn(), post: jest.fn() },
+  default: { get: vi.fn(), post: vi.fn() },
 }))
 
-jest.mock('react-leaflet', () => ({
+vi.mock('react-leaflet', () => ({
   MapContainer: ({ children }: { children?: React.ReactNode }) => (
     <div data-testid="map-container">{children}</div>
   ),
   TileLayer: () => <div data-testid="tile-layer" />,
 }))
 
-jest.mock('../LocationMarker/LocationMarker', () => {
-  return function MockLocationMarker({ name }: { name?: string }) {
+vi.mock('../LocationMarker/LocationMarker', () => ({
+  default: function MockLocationMarker({ name }: { name?: string }) {
     return <div data-testid="location-marker">{name || 'Marker'}</div>
-  }
-})
+  },
+}))
 
-jest.mock('../MyLocation/MyLocation', () => {
-  return function MockMyLocation() {
+vi.mock('../MyLocation/MyLocation', () => ({
+  default: function MockMyLocation() {
     return <div data-testid="my-location">My Location</div>
-  }
-})
+  },
+}))
 
-jest.mock('../../context/Users.context', () => ({
+vi.mock('../../context/Users.context', () => ({
   useUsers: () => ({
     nearbyUsers: [
-      { user_id: 1, username: 'Alice', latitude: 40.5, longitude: 21.6, type: 'user' },
+      {
+        user_id: 1,
+        username: 'Alice',
+        latitude: 40.5,
+        longitude: 21.6,
+        type: 'user',
+      },
     ],
-    fetchUsersNearby: jest.fn(),
-    fetchUsers: jest.fn(),
+    fetchUsersNearby: vi.fn(),
+    fetchUsers: vi.fn(),
     users: [],
     usersPagination: null,
     usersLoading: false,
     usersError: null,
     nearbyLoading: false,
     nearbyError: null,
-    toggleUserActive: jest.fn(),
-    clearUsers: jest.fn(),
-    clearNearbyUsers: jest.fn(),
+    toggleUserActive: vi.fn(),
+    clearUsers: vi.fn(),
+    clearNearbyUsers: vi.fn(),
   }),
 }))
 
@@ -64,6 +70,8 @@ describe('MapComponent', () => {
 
   test('renders location markers for nearby users', () => {
     render(<MapComponent />)
-    expect(screen.getAllByTestId('location-marker').length).toBeGreaterThanOrEqual(1)
+    expect(
+      screen.getAllByTestId('location-marker').length
+    ).toBeGreaterThanOrEqual(1)
   })
 })
