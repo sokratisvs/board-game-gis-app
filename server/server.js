@@ -34,6 +34,9 @@ if (isProduction && allowedOrigins.length === 0) {
   process.exit(1)
 }
 
+// When any allowed origin uses HTTPS, set secure cookies (required behind NPM/TLS)
+const useSecureCookies = allowedOrigins.some((o) => o.startsWith('https://'))
+
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -97,9 +100,12 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
+      secure:
+        (process.env.NODE_ENV === 'production' ||
+          process.env.NODE_ENV === 'staging') &&
+        useSecureCookies,
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      sameSite: useSecureCookies ? 'none' : 'lax',
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },
   })
@@ -137,10 +143,10 @@ app.get('/health', (_, res) => {
 })
 
 // Routes
-app.use('/', require('./routes/auth'))
-app.use('/', require('./routes/user'))
-app.use('/', require('./routes/location'))
-app.use('/', require('./routes/users'))
+app.use('/api', require('./routes/auth'))
+app.use('/api', require('./routes/user'))
+app.use('/api', require('./routes/location'))
+app.use('/api', require('./routes/users'))
 
 // Start server
 const PORT = process.env.PORT || 4000
