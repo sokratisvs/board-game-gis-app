@@ -32,8 +32,8 @@ jobs:
       NODE_ENV: ${{ github.event.inputs.target_env == 'production' && 'production' || 'staging' }}
       FRONTEND_PORT: ${{ github.event.inputs.target_env == 'production' && '3001' || '3000' }}
       BACKEND_PORT: ${{ github.event.inputs.target_env == 'production' && '4001' || '4000' }}
-      CLIENT_URLS: ${{ github.event.inputs.target_env == 'production' && 'http://production-apps.tail272227.ts.net' || 'http://staging-apps.tail272227.ts.net' }}
-      REACT_APP_API_BASE_URL: ${{ github.event.inputs.target_env == 'production' && 'http://production-apps.tail272227.ts.net:4001' || 'http://staging-apps.tail272227.ts.net:4000' }}
+      CLIENT_URLS: ${{ github.event.inputs.target_env == 'production' && 'https://production-apps.tail272227.ts.net' || 'https://staging-apps.tail272227.ts.net' }}
+      REACT_APP_API_BASE_URL: ${{ github.event.inputs.target_env == 'production' && 'https://production-apps.tail272227.ts.net/api' || 'https://staging-apps.tail272227.ts.net/api' }}
       COMPOSE_FILE: containers/docker-compose.yml
 
     steps:
