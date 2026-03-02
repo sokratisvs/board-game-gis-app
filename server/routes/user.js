@@ -1,18 +1,33 @@
 const express = require('express')
 const router = express.Router()
 
+// BACKEND.md: response shape { user_id, username, email, created_on, last_login, type, active } (no password)
+function toUserResponse(row) {
+  if (!row) return null
+  return {
+    user_id: row.user_id,
+    username: row.username,
+    email: row.email,
+    created_on: row.created_on,
+    last_login: row.last_login,
+    type: row.type,
+    active: row.active,
+  }
+}
+
 router.get('/user/:id', (request, response) => {
   const pool = request.app.get('pool')
   const id = parseInt(request.params.id)
 
   pool.query(
-    'SELECT * FROM users WHERE user_id = $1',
+    'SELECT user_id, username, email, created_on, last_login, type, active FROM users WHERE user_id = $1',
     [id],
     (error, results) => {
       if (error) {
         throw error
       }
-      response.status(200).json(results.rows)
+      const user = results.rows[0] ? toUserResponse(results.rows[0]) : null
+      response.status(200).json(user ? [user] : [])
     }
   )
 })
@@ -82,7 +97,7 @@ router.put('/user/:id', async (request, response) => {
 
     response.status(200).json({
       message: 'User updated successfully',
-      user: result.rows[0],
+      user: toUserResponse(result.rows[0]),
     })
   } catch (error) {
     console.error('Error updating user:', error)

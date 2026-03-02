@@ -1,0 +1,51 @@
+{
+  "profile": {
+    "user": {
+      "displayName": "Sokratis",
+      "subtitle": "Grandmaster Rank • Season 5",
+      "avatarUri": null,
+      "level": 42
+    },
+    "stats": {
+      "matches": 127,
+      "wins": 89,
+      "titles": 3
+    },
+    "playStyle": {
+      "tier": "Pro",
+      "tags": ["Strategy", "Eurogames", "Worker Placement", "Tile Laying"]
+    },
+    "games": [
+      { "id": "1", "name": "Catan", "imageUri": null },
+      { "id": "2", "name": "Ticket to Ride", "imageUri": null },
+      { "id": "3", "name": "Carcassonne", "imageUri": null },
+      { "id": "4", "name": "Wingspan", "imageUri": null },
+      { "id": "5", "name": "Terraforming Mars", "imageUri": null }
+    ],
+    "recentBattlefields": [
+      { "id": "bf1", "name": "Acropolis Arena", "imageUri": null, "lastMatchAt": "2 days ago", "xpDelta": 12 },
+      { "id": "bf2", "name": "Port of Piraeus", "imageUri": null, "lastMatchAt": "1 week ago", "xpDelta": -4 }
+    ]
+  },
+  "config": {
+    "games_owned": ["Catan", "Ticket to Ride", "Carcassonne", "Wingspan", "Terraforming Mars"],
+    "games_liked": ["Catan", "Wingspan", "7 Wonders"],
+    "game_types_interested": ["Strategy", "Eurogames", "Worker Placement", "Tile Laying"],
+    "has_space": true,
+    "city": "Athens",
+    "subscription": "extra"
+  },
+  "exploreEvents": [
+    { "title": "Mana Well Alpha", "subtitle": "Central Athens", "lat": 37.9755, "lng": 23.7348, "type": "mana_well", "rewardLabel": "+10 XP", "isActive": true },
+    { "title": "Strategy Challenge", "subtitle": "Syntagma", "lat": 37.9753, "lng": 23.7357, "type": "challenge", "rewardLabel": "Badge", "isActive": true },
+    { "title": "Board Game Cafe", "subtitle": "Venue", "lat": 37.9421, "lng": 23.7145, "type": "venue", "rewardLabel": "Meetup", "isActive": true },
+    { "title": "Weekend Tournament", "subtitle": "Piraeus", "lat": 37.9439, "lng": 23.6469, "type": "venue", "isActive": true },
+    { "title": "Hidden Well", "subtitle": "Lykavittos", "lat": 37.9819, "lng": 23.7433, "type": "mana_well", "isActive": false }
+  ],
+  "exploreMockFromFrontend": [
+    { "title": "Mana Well", "subtitle": "+10 Mana", "lat": 37.982, "lng": 23.726, "type": "mana_well", "rewardLabel": "+10 Mana", "isActive": true },
+    { "title": "Swift Move", "subtitle": "Move 3 Tiles", "lat": 37.985, "lng": 23.729, "type": "challenge", "rewardLabel": "Move 3 Tiles", "isActive": true },
+    { "title": "Plant Trap", "subtitle": "Stun Enemy", "lat": 37.981, "lng": 23.728, "type": "challenge", "rewardLabel": "Stun Enemy", "isActive": true },
+    { "title": "Peak Shield", "subtitle": "+5 Armor", "lat": 37.986, "lng": 23.725, "type": "other", "rewardLabel": "+5 Armor", "isActive": true }
+  ]
+}

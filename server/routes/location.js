@@ -23,7 +23,7 @@ router.post('/location', async (request, response) => {
   const { userId, coordinates } = request.body
 
   if (!userId || !coordinates?.lng || !coordinates?.lat) {
-    return response.status(400).json({ error: 'Missing userId or coordinates' })
+    return response.status(400).json({ message: 'Missing userId or coordinates' })
   }
 
   try {
@@ -41,7 +41,7 @@ router.post('/location', async (request, response) => {
     })
   } catch (error) {
     console.error(error)
-    response.status(500).json({ error: 'Internal Server Error' })
+    response.status(500).json({ message: 'Internal Server Error' })
   }
 })
 
