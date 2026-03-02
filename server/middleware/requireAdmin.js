@@ -1,4 +1,14 @@
 /**
+ * Require any logged-in user. Use for mobile profile, explore, matches.
+ */
+function requireAuth(req, res, next) {
+  if (!req.session?.user) {
+    return res.status(401).json({ message: 'Authentication required' })
+  }
+  next()
+}
+
+/**
  * Require session user to be admin. Use for dashboard/admin routes.
  * Returns 401 if not logged in, 403 if not admin.
  */
@@ -26,4 +36,4 @@ function requireAdminOrSelf(req, res, next) {
   return res.status(403).json({ message: 'Access denied' })
 }
 
-module.exports = { requireAdmin, requireAdminOrSelf }
+module.exports = { requireAuth, requireAdmin, requireAdminOrSelf }
