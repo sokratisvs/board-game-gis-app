@@ -28,24 +28,15 @@ INSERT INTO users (username, password, email, created_on, type)
 SELECT 'sok_gr3', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'sok_gr3@yahoo.gr', NOW(), 'user'
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = 'sok_gr3@yahoo.gr');
 
--- Config + profile for sok_gr3@yahoo.gr
+-- Config + profile for sok_gr3@yahoo.gr (board-game columns omitted; dropped in 016)
 INSERT INTO user_boardgames_config (
-  user_id, games_owned, games_liked, game_types_interested,
-  has_space, city, subscription,
+  user_id, city, subscription,
   display_name, subtitle, level, play_style_tier, matches_count, wins_count, titles_count
 )
-SELECT u.user_id,
-  '["Catan", "Ticket to Ride", "Carcassonne", "Wingspan", "Terraforming Mars"]'::jsonb,
-  '["Catan", "Wingspan", "7 Wonders"]'::jsonb,
-  '["Strategy", "Eurogames", "Worker Placement", "Tile Laying"]'::jsonb,
-  true, 'Athens', 'extra',
+SELECT u.user_id, 'Athens', 'extra',
   'Sokratis', 'Grandmaster Rank • Season 5', 42, 'Pro', 127, 89, 3
 FROM users u WHERE u.email = 'sok_gr3@yahoo.gr'
 ON CONFLICT (user_id) DO UPDATE SET
-  games_owned = EXCLUDED.games_owned,
-  games_liked = EXCLUDED.games_liked,
-  game_types_interested = EXCLUDED.game_types_interested,
-  has_space = EXCLUDED.has_space,
   city = EXCLUDED.city,
   subscription = EXCLUDED.subscription,
   display_name = EXCLUDED.display_name,
