@@ -86,17 +86,19 @@ To get a local copy up and running follow these simple example steps.
      cd ./containers/postgres
      docker-compose --env-file ../../.env up -d
      ```
-4. Install NPM packages & start server
+4. Install NPM packages & start server (API at `http://localhost:4000`)
    ```sh
    cd ./server
    npm install
    npm start
    ```
-5. Install NPM packages & start client
+5. Install NPM packages & start client (admin dashboard at `http://localhost:3000`)
    ```sh
    cd ./client
    npm install
+   npm run dev
    ```
+   By default the Vite dev server proxies `/api` to `http://localhost:4000`, so you can run the backend on port 4000 and the frontend on port 3000 with no extra configuration for local development.
 
 ### Format & Lint (Prettier & ESLint)
 
