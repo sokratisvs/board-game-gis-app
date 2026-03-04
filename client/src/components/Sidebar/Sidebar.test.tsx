@@ -33,9 +33,9 @@ describe('Sidebar', () => {
     )
   })
 
-  test('shows Board Game GIS title when open', () => {
+  test('shows GeoExplorer  title when open', () => {
     renderSidebar(true)
-    expect(screen.getByText(/Board Game GIS/i)).toBeInTheDocument()
+    expect(screen.getByText(/GeoExplorer App/i)).toBeInTheDocument()
   })
 
   test('shows toggle button with expand/collapse label', () => {

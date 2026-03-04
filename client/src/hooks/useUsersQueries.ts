@@ -43,13 +43,22 @@ export type UserStats = {
 
 export type UserConfig = {
   user_id: number
-  games_owned: string[]
-  games_liked: string[]
-  game_types_interested: string[]
-  has_space: boolean
+  interests: string[]
   city: string | null
   subscription: 'free' | 'extra'
   updated_at: string | null
+  display_name?: string | null
+  subtitle?: string | null
+  avatar_uri?: string | null
+  level?: number
+  play_style_tier?: string | null
+  matches_count?: number
+  wins_count?: number
+  titles_count?: number
+}
+
+export type InterestsStats = {
+  interests: { name: string; count: number }[]
 }
 
 // --- Query keys ---
@@ -73,6 +82,7 @@ export const usersKeys = {
       active ?? null,
     ] as const,
   stats: () => [...usersKeys.all, 'stats'] as const,
+  interestsStats: () => [...usersKeys.all, 'interests-stats'] as const,
   config: (userId: number) => [...usersKeys.all, userId, 'config'] as const,
   nearby: (lat: number, lng: number, radius: number) =>
     [...usersKeys.all, 'nearby', lat, lng, radius] as const,
@@ -106,6 +116,13 @@ async function fetchUsersList(params: {
 async function fetchUserStats(): Promise<UserStats> {
   const { data } = await api.get<UserStats>('/users/stats')
   return data
+}
+
+async function fetchInterestsStats(): Promise<InterestsStats> {
+  const { data } = await api.get<InterestsStats>('/users/interests-stats')
+  return {
+    interests: Array.isArray(data?.interests) ? data.interests : [],
+  }
 }
 
 async function fetchUserConfig(userId: number): Promise<UserConfig> {
@@ -165,7 +182,7 @@ export function useUsersList(
 ) {
   const typesKey = types && types.length > 0 ? [...types].sort() : undefined
   const usernameKey = username?.trim() ?? ''
-  const activeKey = active === undefined || active === null ? null : active
+  const activeKey = active ?? undefined
   return useQuery({
     queryKey: usersKeys.list(page, limit, typesKey, usernameKey, activeKey),
     queryFn: () => fetchUsersList({ page, limit, types, username, active }),
@@ -181,6 +198,18 @@ export function useUserStats(
   return useQuery({
     queryKey: usersKeys.stats(),
     queryFn: fetchUserStats,
+    enabled,
+    ...options,
+  })
+}
+
+export function useInterestsStats(
+  enabled = true,
+  options?: Omit<UseQueryOptions<InterestsStats>, 'queryKey' | 'queryFn' | 'enabled'>
+) {
+  return useQuery({
+    queryKey: usersKeys.interestsStats(),
+    queryFn: fetchInterestsStats,
     enabled,
     ...options,
   })
@@ -250,6 +279,22 @@ export function useToggleUserActive(
   })
 }
 
+export function useDeleteUser(
+  options?: UseMutationOptions<void, Error, number>
+) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (userId: number) => {
+      await api.delete(`/user/${userId}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: usersKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: usersKeys.all })
+    },
+    ...options,
+  })
+}
+
 type SaveConfigPayload = Omit<UserConfig, 'user_id' | 'updated_at'>
 
 export function useSaveUserConfig(
@@ -269,12 +314,17 @@ export function useSaveUserConfig(
       config: SaveConfigPayload
     }) => {
       await api.put(`/users/${userId}/config`, {
-        games_owned: config.games_owned,
-        games_liked: config.games_liked,
-        game_types_interested: config.game_types_interested,
-        has_space: config.has_space,
+        interests: config.interests ?? [],
         city: config.city ?? null,
         subscription: config.subscription,
+        display_name: config.display_name,
+        subtitle: config.subtitle,
+        avatar_uri: config.avatar_uri,
+        level: config.level,
+        play_style_tier: config.play_style_tier,
+        matches_count: config.matches_count,
+        wins_count: config.wins_count,
+        titles_count: config.titles_count,
       })
     },
     onSuccess: (_, variables) => {

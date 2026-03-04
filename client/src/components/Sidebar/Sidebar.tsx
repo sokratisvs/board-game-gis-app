@@ -6,6 +6,7 @@ import PathConstants from '../../routes/pathConstants'
 const menuItemsOrder = [
   { label: 'Dashboard', path: PathConstants.DASHBOARD, adminOnly: true },
   { label: 'Users', path: PathConstants.USERS, adminOnly: false },
+  { label: 'Routes', path: PathConstants.EXPLORATION_ROUTES, adminOnly: false },
   { label: 'Map', path: PathConstants.MAP, adminOnly: false },
   { label: 'Settings', path: PathConstants.SETTINGS, adminOnly: false },
 ]
@@ -50,7 +51,7 @@ const Sidebar = ({ open, onToggle }: SidebarProps) => {
         </button>
         {open && (
           <span className="ml-2 text-sm font-semibold truncate">
-            Board Game GIS
+            GeoExplorer App
           </span>
         )}
       </div>
@@ -82,6 +83,7 @@ const Sidebar = ({ open, onToggle }: SidebarProps) => {
                   <span className="shrink-0 w-6 text-center" aria-hidden="true">
                     {item.label === 'Map' && '🗺️'}
                     {item.label === 'Users' && '👥'}
+                    {item.label === 'Routes' && '🧩'}
                     {item.label === 'Dashboard' && '📊'}
                     {item.label === 'Settings' && '⚙️'}
                   </span>

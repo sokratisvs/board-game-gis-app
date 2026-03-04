@@ -1,4 +1,4 @@
-# Board Game GIS App – Client
+# GeoExplorer App – Client
 
 React + TypeScript + Vite frontend.
 
@@ -18,7 +18,8 @@ React + TypeScript + Vite frontend.
 
 ## Env
 
-- **`VITE_API_BASE_URL`** – API base URL (default: `http://localhost:4000`). Only env vars prefixed with `VITE_` are exposed to the client.
+- **`VITE_API_BASE_URL`** – API base URL (client). If unset, the app uses `/api` and the dev server proxies to the backend, so the session cookie works (same-origin). Set in production/Docker so the built app talks to the correct API.
+- **`VITE_API_PROXY_TARGET`** – Dev server only: backend origin the `/api` proxy forwards to (e.g. `http://localhost:4000`, `http://api:4000`). If unset, falls back to the origin derived from `VITE_API_BASE_URL`, then `http://localhost:4000`. Use this when the backend runs on another host/port (e.g. Docker, VM).
 
 ## Docker
 

@@ -10,11 +10,12 @@ const SIDEBAR_EXPAND_BREAKPOINT_PX = 1200
 const MEDIA_EXPAND = `(min-width: ${SIDEBAR_EXPAND_BREAKPOINT_PX}px)`
 
 export default function Layout() {
-  const { isLoggedIn, user, logout } = useContext(AuthContext)
+  const { isLoggedIn, authInitialized, user, logout } = useContext(AuthContext)
   const navigate = useNavigate()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const isMapPage = location.pathname === PathConstants.MAP
+  const isAdmin = user?.role === 'admin'
 
   // Expand sidebar by default only for viewport >= 1200px; sync on resize
   useEffect(() => {
@@ -25,11 +26,13 @@ export default function Layout() {
     return () => m.removeEventListener('change', update)
   }, [])
 
+  // Redirect to login only after auth initialization has run
   useEffect(() => {
+    if (!authInitialized) return
     if (!isLoggedIn) {
-      navigate('/login')
+      navigate('/login', { replace: true })
     }
-  }, [navigate, isLoggedIn])
+  }, [navigate, isLoggedIn, authInitialized])
 
   const onLogout = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -55,22 +58,21 @@ export default function Layout() {
       >
         {/* Shared header: greeting + (Update Location on Map only) + Logout */}
         <header
-          className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4 md:mb-6"
+          className="sticky top-0 z-[1000] mb-4 md:mb-6 py-2 bg-slate-50/95 backdrop-blur supports-[backdrop-filter]:bg-slate-50/80"
           aria-label="User actions"
         >
-          <h1 className="text-2xl font-bold text-sidebar m-0">
-            Hello,{' '}
-            <span className="text-sidebar-accent">
-              {user?.username || 'User'}
-            </span>
-          </h1>
-          <div className="flex flex-wrap items-center gap-3">
-            {isMapPage && <UpdateLocationComponent />}
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-sidebar m-0">
+              Hello,{' '}
+              <span className="text-sidebar-accent">
+                {user?.username || 'User'}
+              </span>
+            </h1>
             <button
               type="button"
               onClick={onLogout}
               className="
-                inline-flex items-center justify-center px-4 py-2
+                ml-auto inline-flex items-center justify-center px-4 py-2
                 text-sm font-medium rounded-lg
                 bg-slate-300 text-slate-800 border border-slate-400
                 hover:bg-slate-400
@@ -81,6 +83,11 @@ export default function Layout() {
               Logout
             </button>
           </div>
+          {isMapPage && !isAdmin && (
+            <div className="mt-3">
+              <UpdateLocationComponent />
+            </div>
+          )}
         </header>
 
         <Suspense

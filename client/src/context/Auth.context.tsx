@@ -1,5 +1,5 @@
 import { LatLngExpression } from 'leaflet'
-import { PropsWithChildren, createContext, useState } from 'react'
+import { PropsWithChildren, createContext, useEffect, useState } from 'react'
 import api from '../api/axios'
 
 type UserStateType =
@@ -21,10 +21,12 @@ export type LoginErrorType =
 const initialState = {
   user: undefined as UserStateType,
   isLoggedIn: false,
+  authInitialized: false,
   loginPending: false,
   loginError: null as any,
   setUser: (value: UserStateType) => {},
   setIsLoggedIn: (value: boolean) => {},
+  setAuthInitialized: (value: boolean) => {},
   setLoginPending: (value: boolean) => {},
   setLoginError: (error: LoginErrorType) => {},
   register: (
@@ -46,6 +48,42 @@ export const AuthContextProvider = ({ children }: PropsWithChildren<{}>) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [loginPending, setLoginPending] = useState(false)
   const [loginError, setLoginError] = useState<LoginErrorType>(undefined)
+  const [authInitialized, setAuthInitialized] = useState(false)
+
+  // Restore session on first load/refresh using cookie-backed session
+  useEffect(() => {
+    let cancelled = false
+    const restore = async () => {
+      try {
+        const me = await api.get('/me')
+        const { username, id, type: role } = me?.data || {}
+        if (!username || !id) return
+
+        const locationResponse = await api.get(`/location/${id}`)
+        const location = locationResponse.data?.[0]?.coordinates
+
+        if (cancelled) return
+        setUser({
+          userId: id,
+          username,
+          coordinates: location,
+          type: 'myLocation',
+          role: role || 'user',
+        })
+        setIsLoggedIn(true)
+      } catch {
+        if (cancelled) return
+        setIsLoggedIn(false)
+        setUser(undefined)
+      } finally {
+        if (!cancelled) setAuthInitialized(true)
+      }
+    }
+    restore()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const login = async (email: string, password: string, callback: Function) => {
     setLoginPending(true)
@@ -139,6 +177,8 @@ export const AuthContextProvider = ({ children }: PropsWithChildren<{}>) => {
         setUser,
         isLoggedIn,
         setIsLoggedIn,
+        authInitialized,
+        setAuthInitialized,
         loginPending,
         setLoginPending,
         loginError,

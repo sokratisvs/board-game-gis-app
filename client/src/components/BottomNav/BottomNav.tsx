@@ -11,6 +11,7 @@ const navItemsOrder = [
     adminOnly: true,
   },
   { label: 'Users', path: PathConstants.USERS, icon: '👥', adminOnly: false },
+  { label: 'Routes', path: PathConstants.EXPLORATION_ROUTES, icon: '🧩', adminOnly: false },
   { label: 'Map', path: PathConstants.MAP, icon: '🗺️', adminOnly: false },
   {
     label: 'Settings',

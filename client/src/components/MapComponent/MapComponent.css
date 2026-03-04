@@ -3,3 +3,30 @@
   height: min(70vh, 600px);
   min-height: 400px;
 }
+
+/* Keep map controls (zoom, etc.) below overlay UI (filter bar, add-match card, date picker) */
+.leaflet-control {
+  z-index: 400;
+}
+
+/* Hide zoom controls while date/time picker is open to avoid overlap */
+.datepicker-open .leaflet-control-zoom {
+  visibility: hidden;
+}
+
+/* Keep datepicker dropdown within viewport (it renders in a portal) */
+.react-datepicker-popper {
+  max-width: calc(100vw - 32px);
+}
+
+/* Hover popup for match markers */
+.leaflet-tooltip.match-marker-tooltip {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+.leaflet-tooltip.match-marker-tooltip::before {
+  border-top-color: white;
+}

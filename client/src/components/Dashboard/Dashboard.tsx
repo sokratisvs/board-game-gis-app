@@ -8,10 +8,14 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
 } from 'recharts'
 import { AuthContext } from '../../context/Auth.context'
 import PathConstants from '../../routes/pathConstants'
-import { useUserStats } from '../../hooks/useUsersQueries'
+import { useInterestsStats, useUserStats } from '../../hooks/useUsersQueries'
 import PageLayout from '../PageLayout/PageLayout'
 import Section from '../ui/Section'
 import Alert from '../ui/Alert'
@@ -23,13 +27,17 @@ export default function Dashboard() {
   const [recentErrors, setRecentErrors] = useState<
     { id: string; message: string; source: string; at: string }[]
   >([])
-
   const isAdmin = user?.role === 'admin'
   const {
     data: userStats,
     isLoading: statsLoading,
     error: statsError,
   } = useUserStats(Boolean(isAdmin))
+  const {
+    data: interestsStats,
+    isLoading: interestsStatsLoading,
+    error: interestsStatsError,
+  } = useInterestsStats(Boolean(isAdmin))
 
   useEffect(() => {
     if (!isAdmin) {
@@ -48,6 +56,10 @@ export default function Dashboard() {
         { type: 'Admin', count: userStats.admin },
       ]
     : []
+  const popularInterestsData = (interestsStats?.interests || []).map((row) => ({
+    type: row.name,
+    count: row.count,
+  }))
 
   return (
     <PageLayout
@@ -101,16 +113,38 @@ export default function Dashboard() {
         ) : null}
       </Section>
 
-      <Section id="events-heading" title="Upcoming events">
-        <p className="text-sm text-slate-500 m-0">
-          Event data can be wired here when an events API is available.
-        </p>
-      </Section>
-
-      <Section id="games-heading" title="Popular games">
-        <p className="text-sm text-slate-500 m-0">
-          Popular games can be wired here from board games config data.
-        </p>
+      <Section
+        id="interests-heading"
+        title="Popular interests (for route/quiz personalization)"
+      >
+        {interestsStatsError && <Alert>{(interestsStatsError as Error).message}</Alert>}
+        {interestsStatsLoading ? (
+          <LoadingMessage>Loading…</LoadingMessage>
+        ) : popularInterestsData.length > 0 ? (
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={popularInterestsData}
+                margin={{ top: 8, right: 8, left: 8, bottom: 8 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="type" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Bar
+                  dataKey="count"
+                  fill="#0ea5e9"
+                  name="Players interested"
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500 m-0">
+            No game preference data available yet.
+          </p>
+        )}
       </Section>
     </PageLayout>
   )

@@ -7,6 +7,7 @@ import {
   useUserConfig,
   useToggleUserActive,
   useSaveUserConfig,
+  useDeleteUser,
   type UserConfig,
   type User,
 } from '../../hooks/useUsersQueries'
@@ -17,10 +18,7 @@ import LoadingMessage from '../ui/LoadingMessage'
 import Modal from '../ui/Modal'
 
 const DEFAULT_CONFIG: Omit<UserConfig, 'user_id' | 'updated_at'> = {
-  games_owned: [],
-  games_liked: [],
-  game_types_interested: [],
-  has_space: false,
+  interests: [],
   city: null,
   subscription: 'free',
 }
@@ -37,6 +35,7 @@ function commaToArray(s: string): string[] {
 }
 
 const USER_TYPES = [
+  { value: 'all', label: 'All' },
   { value: 'user', label: 'User' },
   { value: 'shop', label: 'Shop' },
   { value: 'event', label: 'Event' },
@@ -78,18 +77,24 @@ const btnPrimaryClass =
   'px-3 py-1.5 rounded text-sm font-medium border-none cursor-pointer ' +
   'transition bg-primary text-white hover:bg-primary-hover ' +
   'disabled:opacity-60 disabled:cursor-not-allowed'
-const filterBtnUnselected =
-  'px-3 py-1.5 rounded text-sm font-medium border-2 border-slate-300 ' +
-  'bg-slate-200 text-slate-700 hover:bg-slate-300 focus:outline-none ' +
-  'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ' +
-  btnMinWidth
-const filterBtnSelected =
-  'bg-primary text-white border-2 border-primary hover:bg-primary-hover ' +
-  'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ' +
-  'focus-visible:ring-offset-2 ring-2 ring-primary ring-offset-2 ' +
-  btnMinWidth
-
+const btnDangerClass =
+  'px-3 py-1.5 rounded text-sm font-medium border-none cursor-pointer ' +
+  'transition bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed'
 const PAGE_SIZE = 20
+
+const CONFIRM_WORDS = { delete: 'delete', disable: 'disable' } as const
+
+const CloseDangerIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 20 20"
+    fill="currentColor"
+    className="w-4 h-4 shrink-0"
+    aria-hidden
+  >
+    <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-2.72 2.72a.75.75 0 101.06 1.06L10 11.06l2.72 2.72a.75.75 0 101.06-1.06L11.06 10l2.72-2.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+  </svg>
+)
 
 export default function Users() {
   const navigate = useNavigate()
@@ -100,17 +105,26 @@ export default function Users() {
   const [statusFilter, setStatusFilter] = useState<
     'all' | 'active' | 'inactive'
   >('all')
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([])
+  const [typeFilter, setTypeFilter] = useState<
+    'all' | 'user' | 'shop' | 'event'
+  >('all')
   const [configUser, setConfigUser] = useState<{
     id: number
     username: string
   } | null>(null)
   const [configForm, setConfigForm] = useState<UserConfig | null>(null)
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<number>>(new Set())
+  const [confirmModal, setConfirmModal] = useState<{
+    action: 'delete' | 'disable'
+    userIds: number[]
+    label?: string
+  } | null>(null)
+  const [confirmInput, setConfirmInput] = useState('')
 
   const isAdmin = user?.role === 'admin'
 
-  // Pass selected types when any; empty = show all
-  const typesFilter = selectedTypes.length > 0 ? selectedTypes : undefined
+  // Single type filter; "all" means no type filter
+  const typesFilter = typeFilter === 'all' ? undefined : [typeFilter]
   const activeFilter =
     statusFilter === 'all' ? undefined : statusFilter === 'active'
   const {
@@ -138,6 +152,7 @@ export default function Users() {
   const config = configForm ?? configData ?? null
 
   const toggleActive = useToggleUserActive()
+  const deleteUser = useDeleteUser()
   const saveConfigMutation = useSaveUserConfig()
 
   useEffect(() => {
@@ -176,17 +191,17 @@ export default function Users() {
     setPage(nextPage)
   }
 
-  const toggleTypeFilter = (value: string) => {
-    setSelectedTypes((prev) =>
-      prev.includes(value) ? prev.filter((t) => t !== value) : [...prev, value]
-    )
-    setPage(1)
-  }
-
   const setStatusFilterAndResetPage = (
     value: 'all' | 'active' | 'inactive'
   ) => {
     setStatusFilter(value)
+    setPage(1)
+  }
+
+  const setTypeFilterAndResetPage = (
+    value: 'all' | 'user' | 'shop' | 'event'
+  ) => {
+    setTypeFilter(value)
     setPage(1)
   }
 
@@ -210,10 +225,7 @@ export default function Users() {
       {
         userId: configUser.id,
         config: {
-          games_owned: configForm.games_owned,
-          games_liked: configForm.games_liked,
-          game_types_interested: configForm.game_types_interested,
-          has_space: configForm.has_space,
+          interests: configForm.interests ?? [],
           city: configForm.city ?? null,
           subscription: configForm.subscription,
         },
@@ -229,12 +241,73 @@ export default function Users() {
     })
   }
 
+  const toggleSelectUser = (userId: number) => {
+    setSelectedUserIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(userId)) next.delete(userId)
+      else next.add(userId)
+      return next
+    })
+  }
+
+  const selectAllOnPage = (checked: boolean) => {
+    if (checked) setSelectedUserIds(new Set(users.map((u: User) => u.user_id)))
+    else setSelectedUserIds(new Set())
+  }
+
+  const allSelectedOnPage =
+    users.length > 0 && users.every((u: User) => selectedUserIds.has(u.user_id))
+
+  const openDeleteConfirm = (userIds: number[], label?: string) => {
+    setConfirmModal({ action: 'delete', userIds, label })
+    setConfirmInput('')
+  }
+
+  const openDisableConfirm = (userIds: number[], label?: string) => {
+    setConfirmModal({ action: 'disable', userIds, label })
+    setConfirmInput('')
+  }
+
+  const closeConfirmModal = () => {
+    setConfirmModal(null)
+    setConfirmInput('')
+  }
+
+  const handleConfirmSubmit = () => {
+    if (!confirmModal) return
+    const word = CONFIRM_WORDS[confirmModal.action]
+    if (confirmInput.trim().toLowerCase() !== word) return
+
+    if (confirmModal.action === 'delete') {
+      confirmModal.userIds.forEach((id) => deleteUser.mutate(id))
+    } else {
+      const toDisable = confirmModal.userIds.filter((id) => {
+        const u = users.find((x: User) => x.user_id === id)
+        return u?.active === true
+      })
+      toDisable.forEach((id) => {
+        const u = users.find((x: User) => x.user_id === id)
+        if (u) toggleActive.mutate({ userId: id, currentActive: u.active })
+      })
+    }
+    setSelectedUserIds((prev) => {
+      const next = new Set(prev)
+      confirmModal.userIds.forEach((id) => next.delete(id))
+      return next
+    })
+    closeConfirmModal()
+  }
+
+  const confirmWord = confirmModal ? CONFIRM_WORDS[confirmModal.action] : ''
+  const confirmInputValid =
+    confirmModal && confirmInput.trim().toLowerCase() === confirmWord
+
   if (!isAdmin) return null
 
   return (
     <PageLayout
       title="Users"
-      description="Manage users and board games configuration."
+      description="Manage users and config (interests, city, subscription)."
     >
       <Section id="users-heading" title="User list">
         {/* Search by username */}
@@ -283,52 +356,50 @@ export default function Users() {
           </p>
         </div>
 
-        {/* Status filter: one line on mobile, All / Active / Inactive */}
-        <div
-          className="flex flex-nowrap gap-2 mb-3 md:flex-wrap md:mb-4 overflow-x-auto md:overflow-visible pb-1 md:pb-0"
-          role="group"
-          aria-label="Filter by status"
-        >
-          {STATUS_FILTERS.map(({ value, label }) => {
-            const isSelected = statusFilter === value
-            return (
-              <button
-                key={value}
-                type="button"
-                className={isSelected ? filterBtnSelected : filterBtnUnselected}
-                onClick={() =>
-                  setStatusFilterAndResetPage(
-                    value as 'all' | 'active' | 'inactive'
-                  )
-                }
-                aria-pressed={isSelected}
-              >
-                {label}
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Type filter: one line on mobile, User / Shop / Event */}
-        <div
-          className="flex flex-nowrap gap-2 mb-4 overflow-x-auto md:overflow-visible pb-1 md:pb-0 md:flex-wrap"
-          role="group"
-          aria-label="Filter by user type"
-        >
-          {USER_TYPES.map(({ value, label }) => {
-            const isSelected = selectedTypes.includes(value)
-            return (
-              <button
-                key={value}
-                type="button"
-                className={isSelected ? filterBtnSelected : filterBtnUnselected}
-                onClick={() => toggleTypeFilter(value)}
-                aria-pressed={isSelected}
-              >
-                {label}
-              </button>
-            )
-          })}
+        {/* Mobile-friendly filters: single row, side-by-side dropdowns */}
+        <div className="mb-4 flex items-end gap-2">
+          <label className="flex-1 min-w-0">
+            <span className="block text-xs font-medium text-slate-600 mb-1">
+              Status
+            </span>
+            <select
+              value={statusFilter}
+              onChange={(e) =>
+                setStatusFilterAndResetPage(
+                  e.target.value as 'all' | 'active' | 'inactive'
+                )
+              }
+              className={inputClass + ' w-full'}
+              aria-label="Filter by status"
+            >
+              {STATUS_FILTERS.map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex-1 min-w-0">
+            <span className="block text-xs font-medium text-slate-600 mb-1">
+              Type
+            </span>
+            <select
+              value={typeFilter}
+              onChange={(e) =>
+                setTypeFilterAndResetPage(
+                  e.target.value as 'all' | 'user' | 'shop' | 'event'
+                )
+              }
+              className={inputClass + ' w-full'}
+              aria-label="Filter by user type"
+            >
+              {USER_TYPES.map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
         {usersError && <Alert>{(usersError as Error).message}</Alert>}
@@ -336,6 +407,45 @@ export default function Users() {
           <LoadingMessage>Loading users…</LoadingMessage>
         ) : (
           <>
+            {/* Batch actions when selection is not empty */}
+            {selectedUserIds.size > 0 && (
+              <div className="mb-3 flex flex-wrap items-center gap-2 p-3 bg-slate-100 rounded-lg border border-slate-200">
+                <span className="text-sm font-medium text-slate-700">
+                  {selectedUserIds.size} selected
+                </span>
+                <button
+                  type="button"
+                  className={btnToggleClass}
+                  onClick={() =>
+                    openDisableConfirm(Array.from(selectedUserIds), undefined)
+                  }
+                  disabled={toggleActive.isPending}
+                >
+                  Disable selected
+                </button>
+                <button
+                  type="button"
+                  className={
+                    btnDangerClass + ' inline-flex items-center gap-1.5'
+                  }
+                  onClick={() =>
+                    openDeleteConfirm(Array.from(selectedUserIds), undefined)
+                  }
+                  disabled={deleteUser.isPending}
+                >
+                  <CloseDangerIcon />
+                  Delete selected
+                </button>
+                <button
+                  type="button"
+                  className={btnSecondaryClass}
+                  onClick={() => setSelectedUserIds(new Set())}
+                >
+                  Clear selection
+                </button>
+              </div>
+            )}
+
             {/* Desktop: table */}
             <div className="hidden md:block overflow-x-auto">
               <table
@@ -344,6 +454,17 @@ export default function Users() {
               >
                 <thead>
                   <tr>
+                    <th className={tableThClass + ' w-10'}>
+                      <label className="flex items-center gap-1 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={allSelectedOnPage}
+                          onChange={(e) => selectAllOnPage(e.target.checked)}
+                          aria-label="Select all on page"
+                          className="rounded border-slate-300"
+                        />
+                      </label>
+                    </th>
                     <th className={tableThClass}>ID</th>
                     <th className={tableThClass}>Name</th>
                     <th className={tableThClass}>Email</th>
@@ -355,6 +476,15 @@ export default function Users() {
                 <tbody>
                   {users.map((u: User) => (
                     <tr key={u.user_id} className="hover:bg-slate-50">
+                      <td className={tableTdClass}>
+                        <input
+                          type="checkbox"
+                          checked={selectedUserIds.has(u.user_id)}
+                          onChange={() => toggleSelectUser(u.user_id)}
+                          aria-label={`Select ${u.username}`}
+                          className="rounded border-slate-300"
+                        />
+                      </td>
                       <td className={tableTdClass}>{u.user_id}</td>
                       <td className={tableTdClass}>{u.username}</td>
                       <td className={tableTdClass}>{u.email}</td>
@@ -377,7 +507,11 @@ export default function Users() {
                           <button
                             type="button"
                             className={btnToggleClass}
-                            onClick={() => handleToggleActive(u)}
+                            onClick={() =>
+                              u.active
+                                ? openDisableConfirm([u.user_id], u.username)
+                                : handleToggleActive(u)
+                            }
                             disabled={toggleActive.isPending}
                             aria-label={
                               u.active ? 'Deactivate user' : 'Activate user'
@@ -395,6 +529,20 @@ export default function Users() {
                           >
                             Config
                           </button>
+                          <button
+                            type="button"
+                            className={
+                              btnDangerClass +
+                              ' inline-flex items-center gap-1.5'
+                            }
+                            onClick={() =>
+                              openDeleteConfirm([u.user_id], u.username)
+                            }
+                            disabled={deleteUser.isPending}
+                            aria-label={`Delete ${u.username}`}
+                          >
+                            <CloseDangerIcon />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -411,9 +559,18 @@ export default function Users() {
                   className="bg-slate-50 rounded-lg border border-slate-200 p-4"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
-                    <h3 className="text-base font-semibold text-slate-800 m-0">
-                      {u.username}
-                    </h3>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedUserIds.has(u.user_id)}
+                        onChange={() => toggleSelectUser(u.user_id)}
+                        aria-label={`Select ${u.username}`}
+                        className="rounded border-slate-300"
+                      />
+                      <h3 className="text-base font-semibold text-slate-800 m-0">
+                        {u.username}
+                      </h3>
+                    </label>
                     <span
                       className={
                         'inline-block px-2 py-1 rounded-full text-xs font-semibold shrink-0 ' +
@@ -451,7 +608,11 @@ export default function Users() {
                     <button
                       type="button"
                       className={btnToggleClass}
-                      onClick={() => handleToggleActive(u)}
+                      onClick={() =>
+                        u.active
+                          ? openDisableConfirm([u.user_id], u.username)
+                          : handleToggleActive(u)
+                      }
                       disabled={toggleActive.isPending}
                       aria-label={
                         u.active ? 'Deactivate user' : 'Activate user'
@@ -466,6 +627,17 @@ export default function Users() {
                       aria-label={`Edit config for ${u.username}`}
                     >
                       Config
+                    </button>
+                    <button
+                      type="button"
+                      className={
+                        btnDangerClass + ' inline-flex items-center gap-1.5'
+                      }
+                      onClick={() => openDeleteConfirm([u.user_id], u.username)}
+                      disabled={deleteUser.isPending}
+                      aria-label={`Delete ${u.username}`}
+                    >
+                      <CloseDangerIcon />
                     </button>
                   </div>
                 </li>
@@ -513,7 +685,7 @@ export default function Users() {
       <Modal
         open={!!configUser}
         onClose={handleCloseConfig}
-        title={configUser ? `Board games config — ${configUser.username}` : ''}
+        title={configUser ? `User config — ${configUser.username}` : ''}
         titleId="config-modal-title"
       >
         {configError && (
@@ -530,73 +702,19 @@ export default function Users() {
                 'flex flex-col gap-1 text-sm font-medium text-slate-700'
               }
             >
-              Games owned (comma-separated)
+              Interests (comma-separated)
               <input
                 type="text"
-                value={arrayToComma(config.games_owned)}
+                value={arrayToComma(config.interests ?? [])}
                 onChange={(e) =>
-                  handleConfigChange(
-                    'games_owned',
-                    commaToArray(e.target.value)
-                  )
+                  handleConfigChange('interests', commaToArray(e.target.value))
                 }
-                placeholder="Catan, Ticket to Ride"
+                placeholder="e.g. history, coffee, architecture"
                 className={inputClass}
               />
-            </label>
-            <label
-              className={
-                'flex flex-col gap-1 text-sm font-medium text-slate-700'
-              }
-            >
-              Games liked (comma-separated)
-              <input
-                type="text"
-                value={arrayToComma(config.games_liked)}
-                onChange={(e) =>
-                  handleConfigChange(
-                    'games_liked',
-                    commaToArray(e.target.value)
-                  )
-                }
-                placeholder="Carcassonne"
-                className={inputClass}
-              />
-            </label>
-            <label
-              className={
-                'flex flex-col gap-1 text-sm font-medium text-slate-700'
-              }
-            >
-              Game types interested (comma-separated)
-              <input
-                type="text"
-                value={arrayToComma(config.game_types_interested)}
-                onChange={(e) =>
-                  handleConfigChange(
-                    'game_types_interested',
-                    commaToArray(e.target.value)
-                  )
-                }
-                placeholder="strategy, party, cooperative"
-                className={inputClass}
-              />
-            </label>
-            <label
-              className={
-                'flex flex-row items-center gap-2 text-sm ' +
-                'font-medium text-slate-700'
-              }
-            >
-              <input
-                type="checkbox"
-                checked={config.has_space}
-                onChange={(e) =>
-                  handleConfigChange('has_space', e.target.checked)
-                }
-                className="w-auto"
-              />
-              <span>Has space for hosting games</span>
+              <span className="text-xs text-slate-500 mt-0.5">
+                Used for future route and quiz personalization.
+              </span>
             </label>
             <label
               className={
@@ -658,6 +776,80 @@ export default function Users() {
             </div>
           </div>
         ) : null}
+      </Modal>
+
+      <Modal
+        open={!!confirmModal}
+        onClose={closeConfirmModal}
+        title={
+          confirmModal
+            ? confirmModal.action === 'delete'
+              ? 'Confirm delete'
+              : 'Confirm disable'
+            : ''
+        }
+        titleId="confirm-action-modal-title"
+      >
+        {confirmModal && (
+          <div className="p-5 flex flex-col gap-4">
+            <p className="text-sm text-slate-700 m-0">
+              {confirmModal.action === 'delete' ? (
+                <>
+                  This will permanently delete the user
+                  {confirmModal.label
+                    ? ` "${confirmModal.label}"`
+                    : confirmModal.userIds.length > 1
+                      ? `s (${confirmModal.userIds.length} users)`
+                      : ''}
+                  . This action cannot be undone.
+                </>
+              ) : (
+                <>
+                  This will disable the selected user
+                  {confirmModal.label
+                    ? ` "${confirmModal.label}"`
+                    : confirmModal.userIds.length > 1
+                      ? `s (${confirmModal.userIds.length} users)`
+                      : ''}
+                  . They will not be able to log in until enabled again.
+                </>
+              )}
+            </p>
+            <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+              Type <strong>{confirmWord}</strong> to confirm:
+              <input
+                type="text"
+                value={confirmInput}
+                onChange={(e) => setConfirmInput(e.target.value)}
+                placeholder={confirmWord}
+                className={inputClass}
+                autoComplete="off"
+                aria-label={`Type ${confirmWord} to confirm`}
+              />
+            </label>
+            <div className="flex justify-end gap-3 pt-2 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={closeConfirmModal}
+                className={btnSecondaryClass}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmSubmit}
+                disabled={!confirmInputValid}
+                className={
+                  confirmModal.action === 'delete'
+                    ? btnDangerClass
+                    : btnPrimaryClass
+                }
+              >
+                {confirmModal.action === 'delete' ? 'Delete' : 'Disable'}
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </PageLayout>
   )
