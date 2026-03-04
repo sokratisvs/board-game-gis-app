@@ -1,9 +1,15 @@
 -- Places table with PostGIS geography for radius queries.
 -- Requires PostGIS (CREATE EXTENSION IF NOT EXISTS postgis in db.sql).
+-- Enum/table idempotent for re-run safe migrations.
 
-CREATE TYPE place_category AS ENUM ('museum', 'cafe', 'monument', 'restaurant');
+DO $$
+BEGIN
+  CREATE TYPE place_category AS ENUM ('museum', 'cafe', 'monument', 'restaurant');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TABLE places (
+CREATE TABLE IF NOT EXISTS places (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     category place_category NOT NULL,

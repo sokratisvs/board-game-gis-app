@@ -1,10 +1,22 @@
 -- Route metadata: type (real/fantasy), difficulty, city/world, duration.
 -- city used for real routes; world used for fantasy routes (only one relevant per type).
+-- Enums use DO block so migration is idempotent (re-run safe).
 
-CREATE TYPE route_type AS ENUM ('real', 'fantasy');
-CREATE TYPE route_difficulty AS ENUM ('easy', 'medium', 'hard');
+DO $$
+BEGIN
+    CREATE TYPE route_type AS ENUM ('real', 'fantasy');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TABLE routes (
+DO $$
+BEGIN
+    CREATE TYPE route_difficulty AS ENUM ('easy', 'medium', 'hard');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS routes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL,
     description TEXT,
@@ -23,13 +35,14 @@ CREATE TABLE routes (
 ALTER TABLE exploration_routes
     ADD COLUMN IF NOT EXISTS route_id UUID REFERENCES routes(id) ON DELETE SET NULL;
 
--- Backfill: create one routes row per exploration_route, then set exploration_routes.route_id.
-ALTER TABLE routes ADD COLUMN _backfill_er_id UUID;
+-- Backfill: create one routes row per exploration_route (only for those without route_id yet).
+ALTER TABLE routes ADD COLUMN IF NOT EXISTS _backfill_er_id UUID;
 INSERT INTO routes (title, description, type, difficulty, is_active, created_at, updated_at, _backfill_er_id)
-SELECT name, description, 'real'::route_type, 'medium'::route_difficulty, is_public, created_at, updated_at, id
-FROM exploration_routes;
-UPDATE exploration_routes er SET route_id = r.id FROM routes r WHERE r._backfill_er_id = er.id;
-ALTER TABLE routes DROP COLUMN _backfill_er_id;
+SELECT er.name, er.description, 'real'::route_type, 'medium'::route_difficulty, er.is_public, er.created_at, er.updated_at, er.id
+FROM exploration_routes er
+WHERE er.route_id IS NULL;
+UPDATE exploration_routes er SET route_id = r.id FROM routes r WHERE r._backfill_er_id = er.id AND er.route_id IS NULL;
+ALTER TABLE routes DROP COLUMN IF EXISTS _backfill_er_id;
 
 CREATE INDEX IF NOT EXISTS idx_exploration_routes_route_id ON exploration_routes(route_id);
 COMMENT ON TABLE routes IS 'Route metadata: type (real/fantasy), difficulty, city or world; links to exploration_routes via route_id';

@@ -1,14 +1,14 @@
 -- Quiz system: separate from checkpoints for flexibility (future: multiple quizzes per checkpoint).
 -- Supports multiple correct answers later, timed quizzes, randomized options.
 
-CREATE TABLE quizzes (
+CREATE TABLE IF NOT EXISTS quizzes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     checkpoint_id UUID NOT NULL REFERENCES checkpoints(id) ON DELETE CASCADE,
     question TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE quiz_options (
+CREATE TABLE IF NOT EXISTS quiz_options (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     quiz_id UUID NOT NULL REFERENCES quizzes(id) ON DELETE CASCADE,
     option_text TEXT NOT NULL,

@@ -2,7 +2,7 @@
 -- Real route → lat/lng required (enforced in backend).
 -- Fantasy route → scene required (enforced in backend).
 
-CREATE TABLE checkpoints (
+CREATE TABLE IF NOT EXISTS checkpoints (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     route_id UUID NOT NULL REFERENCES routes(id) ON DELETE CASCADE,
     title TEXT,

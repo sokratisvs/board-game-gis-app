@@ -1,9 +1,15 @@
 -- AI suggestions + admin approval workflow.
 -- When approved → content copied into checkpoints (clue), knowledge_cards, quizzes.
+-- Enum/tables idempotent for re-run safe migrations.
 
-CREATE TYPE ai_status AS ENUM ('pending', 'approved', 'rejected');
+DO $$
+BEGIN
+  CREATE TYPE ai_status AS ENUM ('pending', 'approved', 'rejected');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TABLE ai_suggestions (
+CREATE TABLE IF NOT EXISTS ai_suggestions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     checkpoint_id UUID NOT NULL REFERENCES checkpoints(id) ON DELETE CASCADE,
     generated_clue TEXT,
@@ -18,7 +24,7 @@ CREATE TABLE ai_suggestions (
 );
 
 -- Production table for approved knowledge content (filled on approve).
-CREATE TABLE knowledge_cards (
+CREATE TABLE IF NOT EXISTS knowledge_cards (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     checkpoint_id UUID NOT NULL REFERENCES checkpoints(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
