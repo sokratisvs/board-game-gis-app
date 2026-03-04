@@ -56,6 +56,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       COOKIE_SECRET: ${COOKIE_SECRET}
       CLIENT_URLS: ${CLIENT_URLS}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
     depends_on:
       db:
         condition: service_healthy

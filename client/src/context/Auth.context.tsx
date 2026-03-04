@@ -1,5 +1,5 @@
 import { LatLngExpression } from 'leaflet'
-import { PropsWithChildren, createContext, useEffect, useState } from 'react'
+import { PropsWithChildren, createContext, useEffect, useRef, useState } from 'react'
 import api from '../api/axios'
 
 type UserStateType =
@@ -49,9 +49,16 @@ export const AuthContextProvider = ({ children }: PropsWithChildren<{}>) => {
   const [loginPending, setLoginPending] = useState(false)
   const [loginError, setLoginError] = useState<LoginErrorType>(undefined)
   const [authInitialized, setAuthInitialized] = useState(false)
+  const sessionRestoredRef = useRef(false)
 
-  // Restore session on first load/refresh using cookie-backed session
+  // Restore session on first load/refresh using cookie-backed session.
+  // If we already restored a session (e.g. after remount when navigating to /users),
+  // do not run restore again so a failed second /me does not log the user out.
   useEffect(() => {
+    if (sessionRestoredRef.current) {
+      setAuthInitialized(true)
+      return
+    }
     let cancelled = false
     const restore = async () => {
       try {
@@ -63,6 +70,7 @@ export const AuthContextProvider = ({ children }: PropsWithChildren<{}>) => {
         const location = locationResponse.data?.[0]?.coordinates
 
         if (cancelled) return
+        sessionRestoredRef.current = true
         setUser({
           userId: id,
           username,
@@ -101,6 +109,7 @@ export const AuthContextProvider = ({ children }: PropsWithChildren<{}>) => {
       const locationResponse = await api.get(`/location/${id}`)
       const location = locationResponse.data?.[0]?.coordinates
 
+      sessionRestoredRef.current = true
       setUser({
         userId: id,
         username,
@@ -149,6 +158,7 @@ export const AuthContextProvider = ({ children }: PropsWithChildren<{}>) => {
     try {
       await api.post('/logout')
     } finally {
+      sessionRestoredRef.current = false
       setIsLoggedIn(false)
       setUser(undefined)
       setLoginError(undefined)

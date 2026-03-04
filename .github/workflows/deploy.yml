@@ -32,7 +32,9 @@ jobs:
       NODE_ENV: ${{ github.event.inputs.target_env == 'production' && 'production' || 'staging' }}
       FRONTEND_PORT: ${{ github.event.inputs.target_env == 'production' && '3001' || '3000' }}
       BACKEND_PORT: ${{ github.event.inputs.target_env == 'production' && '4001' || '4000' }}
-      CLIENT_URLS: ${{ github.event.inputs.target_env == 'production' && 'https://production-apps.tail272227.ts.net' || 'https://staging-apps.tail272227.ts.net' }}
+      # Include both root and :port so CORS works when hitting frontend container directly (e.g. :3000) or via reverse proxy (443)
+      CLIENT_URLS: ${{ github.event.inputs.target_env == 'production' && 'https://production-apps.tail272227.ts.net,https://production-apps.tail272227.ts.net:3001' || 'https://staging-apps.tail272227.ts.net,https://staging-apps.tail272227.ts.net:3000' }}
+      COOKIE_DOMAIN: ${{ github.event.inputs.target_env == 'production' && 'production-apps.tail272227.ts.net' || 'staging-apps.tail272227.ts.net' }}
       REACT_APP_API_BASE_URL: ${{ github.event.inputs.target_env == 'production' && 'https://production-apps.tail272227.ts.net/api' || 'https://staging-apps.tail272227.ts.net/api' }}
       COMPOSE_FILE: containers/docker-compose.yml
 
@@ -118,6 +120,7 @@ jobs:
           FRONTEND_PORT=${{ env.FRONTEND_PORT }}
           BACKEND_PORT=${{ env.BACKEND_PORT }}
           CLIENT_URLS=${{ env.CLIENT_URLS }}
+          COOKIE_DOMAIN=${{ env.COOKIE_DOMAIN }}
           VITE_API_BASE_URL=${{ env.VITE_API_BASE_URL }}
           VITE_BUILD_HASH=${{ env.BUILD_HASH }}
           EOF
@@ -142,6 +145,7 @@ jobs:
           FRONTEND_PORT=${{ env.FRONTEND_PORT }}
           BACKEND_PORT=${{ env.BACKEND_PORT }}
           CLIENT_URLS=${{ env.CLIENT_URLS }}
+          COOKIE_DOMAIN=${{ env.COOKIE_DOMAIN }}
           VITE_API_BASE_URL=${{ env.VITE_API_BASE_URL }}
           EOF
 

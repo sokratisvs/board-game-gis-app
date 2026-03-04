@@ -93,6 +93,11 @@ if (process.env.NODE_ENV === 'production' && process.env.COOKIE_SECRET) {
   }
 }
 
+const cookieDomain =
+  process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging'
+    ? (process.env.COOKIE_DOMAIN || '').trim() || undefined
+    : undefined
+
 app.use(
   session({
     name: 'sid',
@@ -107,6 +112,7 @@ app.use(
       httpOnly: true,
       sameSite: useSecureCookies ? 'none' : 'lax',
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      ...(cookieDomain && { domain: cookieDomain }),
     },
   })
 )
@@ -138,8 +144,13 @@ const pool = new Pool({
 app.set('pool', pool)
 
 // Health check (for Docker / Jenkins / monitoring)
-app.get('/health', (_, res) => {
-  res.status(200).type('text/plain').send('ok\n')
+app.get('/health', async (_, res) => {
+  try {
+    await pool.query('SELECT 1')
+    res.status(200).type('text/plain').send('ok\n')
+  } catch (err) {
+    res.status(500).type('text/plain').send('db error\n')
+  }
 })
 
 // Routes
@@ -158,7 +169,7 @@ app.use('/api', require('./routes/ai_suggestions'))
 app.use('/api', require('./routes/places'))
 
 // Start server
-const PORT = process.env.PORT || 4000
+const PORT = process.env.BACKEND_PORT || process.env.PORT || 4000
 const HOST = process.env.HOST || '0.0.0.0'
 app.listen(PORT, HOST, () => {
   console.log(`Server running on http://${HOST}:${PORT}`)

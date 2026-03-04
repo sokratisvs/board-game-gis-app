@@ -200,15 +200,30 @@ EOF
           sh """
             ssh ${env.SSH_HOST} '
               set -e
-              for i in {1..20}; do
-                UNHEALTHY=\$(docker ps --filter "health=unhealthy" --format "{{.Names}}")
-                if [ -z "\$UNHEALTHY" ]; then
-                  echo "✅ All containers healthy"
+
+              echo "🔎 Checking container health..."
+
+              for i in {1..30}; do
+                STATUS=\$(docker ps --format "{{.Names}} {{.Status}}" | grep staging || true)
+
+                echo "\$STATUS"
+
+                if echo "\$STATUS" | grep -q "unhealthy"; then
+                  echo "❌ Container unhealthy"
+                  docker ps
+                  exit 1
+                fi
+
+                if echo "\$STATUS" | grep -vq "starting"; then
+                  echo "✅ Containers ready"
                   exit 0
                 fi
+
+                echo "⏳ Waiting for health checks..."
                 sleep 5
               done
-              echo "❌ Containers unhealthy"
+
+              echo "❌ Containers never became healthy"
               docker ps
               exit 1
             '
