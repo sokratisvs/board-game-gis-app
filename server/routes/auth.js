@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router()
 // const passport = require("passport");
 const bcrypt = require('bcrypt')
+const { requireAuth } = require('../middleware/requireAdmin')
 
 // User registration route
 router.post('/register', async (req, res) => {
@@ -92,6 +93,7 @@ router.post('/login', async (req, res) => {
         username: row.username,
         id: row.user_id,
         type: row.type,
+        role: row.type, // alias so middleware can use either
       }
 
       // Update last_login to current timestamp
@@ -112,6 +114,33 @@ router.post('/login', async (req, res) => {
   }
 })
 
+// Return current session user (for SPA refresh)
+router.get('/me', requireAuth, async (req, res) => {
+  const pool = req.app.get('pool')
+  const sessionUser = req.session.user
+  if (!sessionUser) {
+    return res.status(401).json({ message: 'Authentication required' })
+  }
+  try {
+    const result = await pool.query(
+      'SELECT user_id, username, type FROM users WHERE user_id = $1',
+      [sessionUser.id]
+    )
+    if (result.rows.length === 0) {
+      return res.status(401).json({ message: 'User not found' })
+    }
+    const row = result.rows[0]
+    return res.json({
+      username: row.username,
+      id: row.user_id,
+      type: row.type,
+    })
+  } catch (err) {
+    console.error('me error:', err)
+    return res.status(500).json({ message: 'Error fetching current user' })
+  }
+})
+
 router.get('/logout', async (req, res) => {
   if (req.session && req.session.user) {
     const pool = req.app.get('pool')
@@ -127,6 +156,29 @@ router.get('/logout', async (req, res) => {
       return res.status(500).json({ message: 'Error logging out' })
     }
     res.redirect('/login')
+  })
+})
+
+// SPA-friendly logout: POST /logout just clears session and returns 204
+router.post('/logout', async (req, res) => {
+  try {
+    if (req.session && req.session.user) {
+      const pool = req.app.get('pool')
+      const userId = req.session.user.id
+      await pool.query(
+        'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE user_id = $1',
+        [userId]
+      )
+    }
+  } catch (err) {
+    console.error('logout post error:', err)
+  }
+
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ message: 'Error logging out' })
+    }
+    return res.status(204).send()
   })
 })
 

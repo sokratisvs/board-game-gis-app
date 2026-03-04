@@ -44,11 +44,8 @@ describe('GET /api/profile', () => {
   })
 
   it('returns 200 and ProfileData shape when authenticated', async () => {
-    const userRow = { user_id: 1, username: 'alice' }
+    const userRow = { user_id: 1, username: 'alice', interests: ['history', 'coffee'] }
     const configRow = {
-      games_owned: ['Catan'],
-      games_liked: [],
-      game_types_interested: ['Strategy'],
       display_name: 'Alice',
       subtitle: 'Pro',
       avatar_uri: null,
@@ -68,9 +65,8 @@ describe('GET /api/profile', () => {
     expect(res.body.user.displayName).toBe('Alice')
     expect(res.body.user.level).toBe(10)
     expect(res.body.stats.matches).toBe(5)
-    expect(res.body.playStyle.tags).toEqual(['Strategy'])
-    expect(res.body.games).toHaveLength(1)
-    expect(res.body.games[0].name).toBe('Catan')
+    expect(res.body.playStyle.tags).toEqual(['history', 'coffee'])
+    expect(res.body.interests).toEqual(['history', 'coffee'])
     expect(res.body.recentBattlefields).toHaveLength(1)
     expect(res.body.recentBattlefields[0].name).toBe('Cafe')
     expect(res.body.recentBattlefields[0].xpDelta).toBe(10)

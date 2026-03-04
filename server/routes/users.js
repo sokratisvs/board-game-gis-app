@@ -131,6 +131,31 @@ router.get('/users/stats', async (request, response) => {
   }
 })
 
+router.get('/users/interests-stats', async (request, response) => {
+  const pool = request.app.get('pool')
+  try {
+    const result = await pool.query(
+      `SELECT lower(trim(value::text)) AS name, COUNT(*)::int AS count
+       FROM users, jsonb_array_elements_text(
+         CASE WHEN jsonb_typeof(interests) = 'array' THEN interests ELSE '[]'::jsonb END
+       ) AS value
+       WHERE trim(value::text) <> ''
+       GROUP BY lower(trim(value::text))
+       ORDER BY COUNT(*) DESC, lower(trim(value::text)) ASC
+       LIMIT 20`
+    )
+    response.status(200).json({
+      interests: result.rows.map((row) => ({ name: row.name, count: row.count })),
+    })
+  } catch (error) {
+    if (error.code === '42P01' || (error.message && error.message.includes('interests'))) {
+      return response.status(200).json({ interests: [] })
+    }
+    console.error(error)
+    response.status(500).json({ message: 'Error fetching interests stats' })
+  }
+})
+
 router.get('/users/nearby', async (request, response) => {
   const pool = request.app.get('pool')
   const { latitude, longitude, radius, username } = request.query

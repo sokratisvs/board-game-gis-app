@@ -151,6 +151,11 @@ app.use('/api', require('./routes/users'))
 app.use('/api', require('./routes/profile'))
 app.use('/api', require('./routes/explore'))
 app.use('/api', require('./routes/matches'))
+app.use('/api', require('./routes/exploration'))
+app.use('/api', require('./routes/routes'))
+app.use('/api', require('./routes/quizzes'))
+app.use('/api', require('./routes/ai_suggestions'))
+app.use('/api', require('./routes/places'))
 
 // Start server
 const PORT = process.env.PORT || 4000

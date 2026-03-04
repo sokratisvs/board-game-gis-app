@@ -40,23 +40,28 @@ describe('GET /api/users/:id/config', () => {
     expect(res.status).toBe(403)
   })
 
-  it('returns 200 with default config when no row exists', async () => {
+  it('returns 404 when user does not exist', async () => {
     const pool = createMockPool([[]])
+    const app = appWithPoolAndSession(pool, { id: 1, type: 'user' })
+    const res = await request(app).get('/api/users/1/config')
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 200 with default config when no config row exists', async () => {
+    const userRow = [{ user_id: 1, interests: [] }]
+    const pool = createMockPool([userRow, []])
     const app = appWithPoolAndSession(pool, { id: 1, type: 'user' })
     const res = await request(app).get('/api/users/1/config')
     expect(res.status).toBe(200)
     expect(res.body.user_id).toBe(1)
-    expect(res.body.games_owned).toEqual([])
+    expect(res.body.interests).toEqual([])
     expect(res.body.subscription).toBe('free')
   })
 
   it('returns 200 with config when admin or self', async () => {
-    const row = {
+    const userRow = [{ user_id: 1, interests: ['history', 'coffee'] }]
+    const configRow = [{
       user_id: 1,
-      games_owned: ['Catan'],
-      games_liked: [],
-      game_types_interested: ['Strategy'],
-      has_space: true,
       city: 'Athens',
       subscription: 'extra',
       updated_at: new Date(),
@@ -68,13 +73,13 @@ describe('GET /api/users/:id/config', () => {
       matches_count: 5,
       wins_count: 3,
       titles_count: 0,
-    }
-    const pool = createMockPool([[row]])
+    }]
+    const pool = createMockPool([userRow, configRow])
     const app = appWithPoolAndSession(pool, { id: 1, type: 'user' })
     const res = await request(app).get('/api/users/1/config')
     expect(res.status).toBe(200)
     expect(res.body.user_id).toBe(1)
-    expect(res.body.games_owned).toEqual(['Catan'])
+    expect(res.body.interests).toEqual(['history', 'coffee'])
     expect(res.body.subscription).toBe('extra')
     expect(res.body.display_name).toBe('Alice')
   })
@@ -84,17 +89,14 @@ describe('PUT /api/users/:id/config', () => {
   it('returns 401 when not authenticated', async () => {
     const pool = createMockPool([])
     const app = appWithPoolAndSession(pool)
-    const res = await request(app).put('/api/users/1/config').send({ games_owned: ['Catan'] })
+    const res = await request(app).put('/api/users/1/config').send({ interests: ['history'] })
     expect(res.status).toBe(401)
   })
 
   it('returns 200 and updated config on success', async () => {
-    const updated = {
+    const userRow = [{ interests: ['history', 'architecture'] }]
+    const configRow = [{
       user_id: 1,
-      games_owned: ['Catan', 'Chess'],
-      games_liked: [],
-      game_types_interested: ['Strategy'],
-      has_space: true,
       city: 'Athens',
       subscription: 'extra',
       updated_at: new Date(),
@@ -106,13 +108,13 @@ describe('PUT /api/users/:id/config', () => {
       matches_count: 5,
       wins_count: 3,
       titles_count: 0,
-    }
-    const pool = createMockPool([[], [updated]])
+    }]
+    const pool = createMockPool([[], [], userRow, configRow])
     const app = appWithPoolAndSession(pool, { id: 1, type: 'user' })
     const res = await request(app)
       .put('/api/users/1/config')
-      .send({ games_owned: ['Catan', 'Chess'] })
+      .send({ interests: ['history', 'architecture'], city: 'Athens', subscription: 'extra' })
     expect(res.status).toBe(200)
-    expect(res.body.games_owned).toEqual(['Catan', 'Chess'])
+    expect(res.body.interests).toEqual(['history', 'architecture'])
   })
 })

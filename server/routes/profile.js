@@ -4,8 +4,7 @@ const { requireAuth } = require('../middleware/requireAdmin')
 
 /**
  * GET /api/profile
- * Mobile app: Profile screen. Returns ProfileData shape (user, stats, playStyle, games, recentBattlefields).
- * Aggregates from users + user_boardgames_config; stats/battlefields stubbed until we have those tables.
+ * Profile screen: user, stats, interests (for future route/quiz personalization), recentBattlefields.
  */
 router.get('/profile', requireAuth, async (req, res) => {
   const pool = req.app.get('pool')
@@ -14,12 +13,11 @@ router.get('/profile', requireAuth, async (req, res) => {
   try {
     const [userResult, configResult, battlefieldsResult] = await Promise.all([
       pool.query(
-        'SELECT user_id, username FROM users WHERE user_id = $1',
+        'SELECT user_id, username, interests FROM users WHERE user_id = $1',
         [userId]
       ),
       pool.query(
-        `SELECT games_owned, games_liked, game_types_interested,
-                display_name, subtitle, avatar_uri, level, play_style_tier,
+        `SELECT display_name, subtitle, avatar_uri, level, play_style_tier,
                 matches_count, wins_count, titles_count
          FROM user_boardgames_config WHERE user_id = $1`,
         [userId]
@@ -38,8 +36,7 @@ router.get('/profile', requireAuth, async (req, res) => {
       return res.status(404).json({ message: 'User not found' })
     }
 
-    const gamesOwned = Array.isArray(config?.games_owned) ? config.games_owned : []
-    const gameTypes = Array.isArray(config?.game_types_interested) ? config.game_types_interested : []
+    const interests = Array.isArray(userRow.interests) ? userRow.interests : (typeof userRow.interests === 'string' ? (() => { try { const a = JSON.parse(userRow.interests); return Array.isArray(a) ? a : [] } catch { return [] } })() : [])
 
     const profile = {
       user: {
@@ -55,13 +52,9 @@ router.get('/profile', requireAuth, async (req, res) => {
       },
       playStyle: {
         tier: config?.play_style_tier ?? null,
-        tags: gameTypes,
+        tags: interests,
       },
-      games: gamesOwned.map((name, i) => ({
-        id: String(i + 1),
-        name: typeof name === 'string' ? name : String(name),
-        imageUri: null,
-      })),
+      interests,
       recentBattlefields: battlefields.map((b) => ({
         id: b.id,
         name: b.name,
