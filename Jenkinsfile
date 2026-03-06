@@ -41,13 +41,18 @@ pipeline {
             env.FRONTEND_PORT = '3001'
             env.BACKEND_PORT  = '4001'
             env.CLIENT_URLS   = 'https://production-apps.tail272227.ts.net'
+            env.COOKIE_DOMAIN = 'production-apps.tail272227.ts.net'
           } else {
             env.APP_DIR       = '/var/www/boardgames/staging'
             env.SSH_HOST      = 'deploy@staging-apps.tail272227.ts.net'
             env.NODE_ENV      = 'staging'
             env.FRONTEND_PORT = '3000'
             env.BACKEND_PORT  = '4000'
-            env.CLIENT_URLS   = 'https://staging-apps.tail272227.ts.net,http://staging-apps.tail272227.ts.net:3000'
+            // HTTP-only: dashboard is served from the same VM over HTTP:3000.
+            // Including an https:// origin would set useSecureCookies=true on the
+            // backend, issuing Secure cookies that browsers refuse to send over HTTP.
+            env.CLIENT_URLS   = 'http://staging-apps.tail272227.ts.net:3000'
+            env.COOKIE_DOMAIN = 'staging-apps.tail272227.ts.net'
           }
 
           env.BUILD_HASH = sh(
@@ -145,6 +150,7 @@ COOKIE_SECRET=${COOKIE_SECRET}
 FRONTEND_PORT=${env.FRONTEND_PORT}
 BACKEND_PORT=${env.BACKEND_PORT}
 CLIENT_URLS=${env.CLIENT_URLS}
+COOKIE_DOMAIN=${env.COOKIE_DOMAIN}
 
 VITE_API_BASE_URL=/api
 VITE_BUILD_HASH=${env.BUILD_HASH}
