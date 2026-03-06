@@ -3,6 +3,7 @@ const router = express.Router()
 // const passport = require("passport");
 const bcrypt = require('bcrypt')
 const { requireAuth } = require('../middleware/requireAdmin')
+const { createAuthToken } = require('../authToken')
 
 // User registration route
 router.post('/register', async (req, res) => {
@@ -103,7 +104,9 @@ router.post('/login', async (req, res) => {
       )
 
       req.session.user = user
-      return res.json(user)
+      const token = createAuthToken(user.id)
+      // Mobile app stores this token (e.g. AsyncStorage) and sends Authorization: Bearer <token> on every request.
+      return res.json({ ...user, token })
     } else {
       return res
         .status(400)

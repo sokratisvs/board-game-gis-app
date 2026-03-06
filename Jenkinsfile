@@ -47,7 +47,7 @@ pipeline {
             env.NODE_ENV      = 'staging'
             env.FRONTEND_PORT = '3000'
             env.BACKEND_PORT  = '4000'
-            env.CLIENT_URLS   = 'https://staging-apps.tail272227.ts.net'
+            env.CLIENT_URLS   = 'https://staging-apps.tail272227.ts.net,http://staging-apps.tail272227.ts.net:3000'
           }
 
           env.BUILD_HASH = sh(

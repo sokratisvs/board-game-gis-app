@@ -58,6 +58,8 @@ app.use(
         'http://localhost:3000',
         'http://localhost:3001',
         'http://127.0.0.1:3000',
+        'http://localhost:8081',
+        'http://localhost:8082',
       ]
       if (devOrigins.includes(origin) || allowedOrigins.includes(origin)) {
         return callback(null, true)
@@ -98,6 +100,15 @@ const cookieDomain =
     ? (process.env.COOKIE_DOMAIN || '').trim() || undefined
     : undefined
 
+if (
+  (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') &&
+  !cookieDomain
+) {
+  console.warn(
+    'Session cookie: COOKIE_DOMAIN is not set. Set it (e.g. staging-apps.tail272227.ts.net) so the cookie is sent for your frontend origin.'
+  )
+}
+
 app.use(
   session({
     name: 'sid',
@@ -105,6 +116,7 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
+      path: '/',
       secure:
         (process.env.NODE_ENV === 'production' ||
           process.env.NODE_ENV === 'staging') &&
@@ -142,6 +154,38 @@ const pool = new Pool({
 })
 
 app.set('pool', pool)
+
+// Bearer token auth for mobile: mobile app reads userToken from AsyncStorage and
+// sets Authorization: Bearer <userToken> on every request (axios interceptor).
+// If no session cookie but this header is present and valid, we set req.session.user
+// so requireAuth and requireAdmin work unchanged.
+const { verifyAuthToken } = require('./authToken')
+app.use(async (req, res, next) => {
+  if (req.session?.user) return next()
+  const auth = req.headers.authorization
+  const token = auth && auth.startsWith('Bearer ') ? auth.slice(7).trim() : null
+  if (!token) return next()
+  const payload = verifyAuthToken(token)
+  if (!payload) return next()
+  try {
+    const pool = req.app.get('pool')
+    const result = await pool.query(
+      'SELECT user_id, username, type FROM users WHERE user_id = $1',
+      [payload.userId]
+    )
+    if (result.rows.length === 0) return next()
+    const row = result.rows[0]
+    req.session.user = {
+      id: row.user_id,
+      username: row.username,
+      type: row.type,
+      role: row.type,
+    }
+  } catch (err) {
+    console.error('Bearer token user load error:', err.message)
+  }
+  next()
+})
 
 // Health check (for Docker / Jenkins / monitoring)
 app.get('/health', async (_, res) => {
