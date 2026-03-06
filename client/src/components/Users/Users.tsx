@@ -98,7 +98,7 @@ const CloseDangerIcon = () => (
 
 export default function Users() {
   const navigate = useNavigate()
-  const { user } = useContext(AuthContext)
+  const { user, authInitialized } = useContext(AuthContext)
   const [page, setPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -155,12 +155,13 @@ export default function Users() {
   const deleteUser = useDeleteUser()
   const saveConfigMutation = useSaveUserConfig()
 
+  // Only redirect non-admins after auth is initialized; avoid redirecting while user is still loading.
   useEffect(() => {
-    if (!isAdmin) {
+    if (!authInitialized) return
+    if (user != null && user.role !== 'admin') {
       navigate(PathConstants.MAP, { replace: true })
-      return
     }
-  }, [isAdmin, navigate])
+  }, [authInitialized, user, navigate])
 
   // Debounce search input so we don't hit the API on every keystroke
   useEffect(() => {
@@ -302,7 +303,14 @@ export default function Users() {
   const confirmInputValid =
     confirmModal && confirmInput.trim().toLowerCase() === confirmWord
 
-  if (!isAdmin) return null
+  if (!authInitialized) {
+    return (
+      <PageLayout title="Users" description="Manage users and config.">
+        <p className="text-slate-600">Loading…</p>
+      </PageLayout>
+    )
+  }
+  if (user != null && user.role !== 'admin') return null
 
   return (
     <PageLayout
