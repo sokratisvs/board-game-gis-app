@@ -34,8 +34,9 @@ if (isProduction && allowedOrigins.length === 0) {
   process.exit(1)
 }
 
-// When any allowed origin uses HTTPS, set secure cookies (required behind NPM/TLS)
-const useSecureCookies = allowedOrigins.some((o) => o.startsWith('https://'))
+// Cookie security is determined per-request via secure:'auto' (see session config below).
+// express-session reads req.secure (set by trust proxy + X-Forwarded-Proto) so HTTPS
+// access gets Secure cookies and HTTP access (e.g. direct :3000) gets non-Secure ones.
 
 app.use(
   cors({
@@ -117,12 +118,12 @@ app.use(
     saveUninitialized: false,
     cookie: {
       path: '/',
-      secure:
-        (process.env.NODE_ENV === 'production' ||
-          process.env.NODE_ENV === 'staging') &&
-        useSecureCookies,
+      // 'auto' means express-session sets Secure based on req.secure per request.
+      // With trust proxy:1, req.secure=true when X-Forwarded-Proto:https (HTTPS access)
+      // and false for plain HTTP (direct :3000 access). Both work without a static flag.
+      secure: 'auto',
       httpOnly: true,
-      sameSite: useSecureCookies ? 'none' : 'lax',
+      sameSite: 'lax',
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       ...(cookieDomain && { domain: cookieDomain }),
     },

@@ -48,10 +48,7 @@ pipeline {
             env.NODE_ENV      = 'staging'
             env.FRONTEND_PORT = '3000'
             env.BACKEND_PORT  = '4000'
-            // HTTP-only: dashboard is served from the same VM over HTTP:3000.
-            // Including an https:// origin would set useSecureCookies=true on the
-            // backend, issuing Secure cookies that browsers refuse to send over HTTP.
-            env.CLIENT_URLS   = 'http://staging-apps.tail272227.ts.net:3000'
+            env.CLIENT_URLS   = 'https://staging-apps.tail272227.ts.net,http://staging-apps.tail272227.ts.net:3000'
             env.COOKIE_DOMAIN = 'staging-apps.tail272227.ts.net'
           }
 
