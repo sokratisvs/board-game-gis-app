@@ -176,9 +176,8 @@ EOF
               set -e
               cd ${env.APP_DIR}
 
-              echo "🧹 Stopping containers..."
-              docker compose down --remove-orphans || true
-
+              # Build new images first while previous containers keep running.
+              # Only after both builds succeed do we stop and replace (protects current deployment on build failure).
               echo "🎨 Rebuilding FRONTEND (always no-cache)..."
               docker compose build --no-cache frontend
 
@@ -189,7 +188,10 @@ EOF
                 docker compose build backend
               fi
 
-              echo "🚀 Starting containers..."
+              echo "🧹 Stopping previous containers..."
+              docker compose down --remove-orphans || true
+
+              echo "🚀 Starting new containers..."
               docker compose up -d --force-recreate
             '
           """
