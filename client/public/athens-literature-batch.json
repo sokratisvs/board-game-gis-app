@@ -1,0 +1,92 @@
+[
+  {
+    "name": "Zonar's – Literary Café",
+    "description": "Single-clue route at the legendary café where writers and intellectuals gathered from the 1930s.",
+    "type": "literature",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9762, "lng": 23.7338 },
+        "validationRadiusMeters": 45,
+        "quiz": {
+          "question": "Founded in 1939 at the junction of Voukourestiou and Panepistimiou, this café was once the heart of Athenian intellectual life—compared to Les Deux Magots in Paris. Writers, artists, and politicians gathered here. What is its name?",
+          "options": ["Zonar's", "Zonars", "Both", "Black Cat Café"],
+          "correctAnswerIndex": 2
+        }
+      }
+    ]
+  },
+  {
+    "name": "Plaka – Writers' Quarter",
+    "description": "Single-clue route in the neighborhood that inspired poets and novelists for generations.",
+    "type": "literature",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9718, "lng": 23.732 },
+        "validationRadiusMeters": 50,
+        "quiz": {
+          "question": "The oldest neighborhood of Athens, under the Acropolis, has been a setting and inspiration for Greek and foreign writers. Henry Miller and Lawrence Durrell wandered these streets. Which district is known as the 'neighborhood of the gods'?",
+          "options": ["Plaka", "Psiri", "Monastiraki", "Kolonaki"],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "Syntagma – Constitution and Letters",
+    "description": "Single-clue route where politics and literature met in 20th-century Athens.",
+    "type": "literature",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9755, "lng": 23.7357 },
+        "validationRadiusMeters": 50,
+        "quiz": {
+          "question": "This square took its name from the Constitution that the first king of Greece was forced to grant. Nearby, literary cafés and publishing houses made it a centre of Greek letters. Which square is the heart of modern Athens?",
+          "options": ["Syntagma Square", "Omonoia", "Monastiraki", "Kolonaki"],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "Literary Athens – From Café to Quarter",
+    "description": "Two-clue route from the historic literary café to the writers' quarter.",
+    "type": "literature",
+    "city": "Athens",
+    "estimatedDurationMin": 25,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9762, "lng": 23.7338 },
+        "validationRadiusMeters": 45,
+        "quiz": {
+          "question": "You are at the junction of two famous streets, near Syntagma. Here stood the most famous literary café of Athens, where Nobel laureates and expat writers once met. Which café was 'the place to be' for Athenian intellectuals?",
+          "options": ["Zonar's", "Flocafé", "Black Cat", "Da Capo"],
+          "correctAnswerIndex": 0
+        }
+      },
+      {
+        "order": 1,
+        "coordinates": { "lat": 37.9718, "lng": 23.732 },
+        "validationRadiusMeters": 50,
+        "quiz": {
+          "question": "You have reached the old quarter under the Acropolis. Poets like Seferis and Palamas wrote of this city; foreign authors set scenes here. Which neighborhood has been the soul of literary Athens?",
+          "options": ["Plaka", "Psiri", "Thissio", "Gazi"],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  }
+]

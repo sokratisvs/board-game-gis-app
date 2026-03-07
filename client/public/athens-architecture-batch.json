@@ -1,0 +1,197 @@
+[
+  {
+    "name": "Temple of Hephaestus",
+    "description": "Single-clue route at one of the best-preserved ancient Doric temples in Greece.",
+    "type": "architecture",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9756, "lng": 23.7214 },
+        "validationRadiusMeters": 55,
+        "quiz": {
+          "question": "This 5th-century BC Doric temple stands in the Ancient Agora and is dedicated to the god of metalworking and craftsmanship. Its columns and frieze are remarkably intact. Which temple is it?",
+          "options": [
+            "Temple of Hephaestus",
+            "Parthenon",
+            "Temple of Olympian Zeus",
+            "Erechtheion"
+          ],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "Hadrian's Arch",
+    "description": "Single-clue route at the Roman gate marking the boundary between old and new Athens.",
+    "type": "architecture",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9697, "lng": 23.732 },
+        "validationRadiusMeters": 35,
+        "quiz": {
+          "question": "This Roman triumphal arch was built in 131 AD. Inscriptions on either side still read 'This is Athens, the ancient city of Theseus' and 'This is the city of Hadrian'. Which monument marks the divide between old and new Athens?",
+          "options": [
+            "Hadrian's Arch",
+            "Propylaea",
+            "Arch of Titus",
+            "Gate of Athena"
+          ],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "Tower of the Winds",
+    "description": "Single-clue route at the ancient octagonal clocktower in the Roman Agora.",
+    "type": "architecture",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9744, "lng": 23.7265 },
+        "validationRadiusMeters": 40,
+        "quiz": {
+          "question": "In the Roman Agora stands an octagonal marble tower from the 1st century BC. It once combined a water clock, sundials, and a wind vane. Greeks often call it 'Aerides'. What is its common English name?",
+          "options": [
+            "Tower of the Winds",
+            "Horologion of Andronikos",
+            "Both A and B",
+            "Tower of Hadrian"
+          ],
+          "correctAnswerIndex": 2
+        }
+      }
+    ]
+  },
+  {
+    "name": "Stoa of Attalos",
+    "description": "Single-clue route at the reconstructed Hellenistic portico housing the Agora Museum.",
+    "type": "architecture",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9752, "lng": 23.7224 },
+        "validationRadiusMeters": 45,
+        "quiz": {
+          "question": "This two-storey colonnade was a gift from a king of Pergamon. It was fully reconstructed in the 1950s and now houses the Museum of the Ancient Agora. Which stoa is it?",
+          "options": [
+            "Stoa of Attalos",
+            "Stoa Poikile",
+            "Stoa of Zeus",
+            "Stoa Basileios"
+          ],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "Zappeion",
+    "description": "Single-clue route at the neoclassical exhibition hall built for the revival of the Olympic Games.",
+    "type": "architecture",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9717, "lng": 23.7364 },
+        "validationRadiusMeters": 60,
+        "quiz": {
+          "question": "This neoclassical building was donated by the Zappas family to promote the revival of the Olympic Games. It stands in the National Garden and now hosts exhibitions and summits. What is it called?",
+          "options": ["Zappeion", "Zappeio", "Both", "Olympion"],
+          "correctAnswerIndex": 2
+        }
+      }
+    ]
+  },
+  {
+    "name": "Old Royal Palace – Parliament",
+    "description": "Single-clue route at the neoclassical building that became the Greek Parliament.",
+    "type": "architecture",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9757, "lng": 23.7354 },
+        "validationRadiusMeters": 50,
+        "quiz": {
+          "question": "This neoclassical palace was built in 1836–1843 as the royal residence. Today it houses the Hellenic Parliament and the Tomb of the Unknown Soldier stands before it. Which building is it?",
+          "options": [
+            "Old Royal Palace / Parliament",
+            "Zappeion",
+            "Academy of Athens",
+            "Presidential Palace"
+          ],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "Lysikrates Monument",
+    "description": "Single-clue route at the first external use of Corinthian columns in Athens.",
+    "type": "architecture",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9705, "lng": 23.7312 },
+        "validationRadiusMeters": 35,
+        "quiz": {
+          "question": "This circular monument in Plaka was built by a choregos to support the tripod he won in a drama contest. It is the first monument in Athens to use Corinthian columns on the outside. Which is it?",
+          "options": [
+            "Lysikrates Monument",
+            "Choragic Monument",
+            "Both",
+            "Monument of Agrippa"
+          ],
+          "correctAnswerIndex": 2
+        }
+      }
+    ]
+  },
+  {
+    "name": "Odeon of Herodes Atticus",
+    "description": "Single-clue route at the Roman stone theatre on the south slope of the Acropolis.",
+    "type": "architecture",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9708, "lng": 23.7244 },
+        "validationRadiusMeters": 45,
+        "quiz": {
+          "question": "This Roman stone theatre was built in 161 AD by Herodes Atticus in memory of his wife. It sits on the south slope of the Acropolis and still hosts summer performances. What is it called?",
+          "options": [
+            "Odeon of Herodes Atticus",
+            "Theatre of Dionysus",
+            "Herodeion",
+            "A or C"
+          ],
+          "correctAnswerIndex": 3
+        }
+      }
+    ]
+  }
+]

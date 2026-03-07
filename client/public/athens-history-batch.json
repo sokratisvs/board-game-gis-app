@@ -1,0 +1,202 @@
+[
+  {
+    "name": "Ancient Agora – Civic Heart",
+    "description": "Single-clue route at the marketplace and civic center where democracy was born.",
+    "type": "history",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9745, "lng": 23.7214 },
+        "validationRadiusMeters": 80,
+        "quiz": {
+          "question": "From the 6th century BC this was the commercial and political heart of Athens. Socrates debated here; citizens gathered to trade and govern. It lay northwest of the Acropolis. Which ancient site is it?",
+          "options": [
+            "Ancient Agora",
+            "Roman Agora",
+            "Acropolis",
+            "Kerameikos"
+          ],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "Pnyx – Birthplace of Democracy",
+    "description": "Single-clue route at the hill where the Athenian assembly voted and debated.",
+    "type": "history",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9717, "lng": 23.7188 },
+        "validationRadiusMeters": 55,
+        "quiz": {
+          "question": "On this hill west of the Acropolis, the ekklesia—the Athenian assembly—met from the 5th century BC. Pericles and Demosthenes spoke from the bema. Where did direct democracy hold its meetings?",
+          "options": ["Pnyx", "Areopagus", "Agora", "Acropolis"],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "Kerameikos – Potters and the Dead",
+    "description": "Single-clue route at the ancient potters' quarter and main cemetery of Athens.",
+    "type": "history",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9788, "lng": 23.7183 },
+        "validationRadiusMeters": 70,
+        "quiz": {
+          "question": "This district took its name from the potters who worked here. It was also the main cemetery of ancient Athens; the Sacred Way to Eleusis began at its Dipylon Gate. Which site is it?",
+          "options": ["Kerameikos", "Dipylon", "Academy", "Agora"],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "Roman Agora",
+    "description": "Single-clue route at the Roman-era market square built under Caesar and Augustus.",
+    "type": "history",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9742, "lng": 23.7272 },
+        "validationRadiusMeters": 50,
+        "quiz": {
+          "question": "Julius Caesar and Augustus funded this market square, separate from the older Greek Agora. It became the commercial centre of Roman Athens. What is it called?",
+          "options": [
+            "Roman Agora",
+            "Forum of Caesar",
+            "Agora of Augustus",
+            "Imperial Agora"
+          ],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "Areopagus – Hill of the Council",
+    "description": "Single-clue route at the rock where the ancient homicide court met and Paul preached.",
+    "type": "history",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9717, "lng": 23.7216 },
+        "validationRadiusMeters": 40,
+        "quiz": {
+          "question": "This rocky hill west of the Acropolis was the seat of the ancient council that tried murder cases. According to Acts, the Apostle Paul addressed the Athenians here. Which hill is it?",
+          "options": ["Areopagus", "Pnyx", "Acropolis", "Philopappos"],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "Acropolis – Sacred Rock",
+    "description": "Single-clue route at the citadel that has defined Athens since antiquity.",
+    "type": "history",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9715, "lng": 23.7265 },
+        "validationRadiusMeters": 70,
+        "quiz": {
+          "question": "This limestone rock has been the symbol of Athens since at least the 5th century BC. Under Pericles the Parthenon was built here for Athena. Which UNESCO World Heritage site crowns the city?",
+          "options": ["Acropolis", "Lycabettus", "Philopappos", "Areopagus"],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "From Agora to Pnyx",
+    "description": "Two-clue route from the ancient marketplace to the assembly hill.",
+    "type": "history",
+    "city": "Athens",
+    "estimatedDurationMin": 25,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9745, "lng": 23.7214 },
+        "validationRadiusMeters": 80,
+        "quiz": {
+          "question": "You are in the ancient marketplace where Athenians traded and philosophers taught. Socrates asked his questions here. Which site was the civic and commercial heart of classical Athens?",
+          "options": ["Ancient Agora", "Roman Agora", "Acropolis", "Kerameikos"],
+          "correctAnswerIndex": 0
+        }
+      },
+      {
+        "order": 1,
+        "coordinates": { "lat": 37.9717, "lng": 23.7188 },
+        "validationRadiusMeters": 55,
+        "quiz": {
+          "question": "You have climbed to the hill where the Athenian assembly met. Here citizens voted and orators spoke. Where did the ekklesia hold its meetings from the age of Cleisthenes?",
+          "options": ["Pnyx", "Areopagus", "Agora", "Acropolis"],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "Three Hills of Power",
+    "description": "Three-clue route linking the Acropolis, Areopagus, and Pnyx.",
+    "type": "history",
+    "city": "Athens",
+    "estimatedDurationMin": 45,
+    "difficulty": "medium",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9715, "lng": 23.7265 },
+        "validationRadiusMeters": 70,
+        "quiz": {
+          "question": "First stop: the sacred rock and the Parthenon. This was the religious and symbolic centre of ancient Athens. Which site is it?",
+          "options": ["Acropolis", "Areopagus", "Pnyx", "Agora"],
+          "correctAnswerIndex": 0
+        }
+      },
+      {
+        "order": 1,
+        "coordinates": { "lat": 37.9717, "lng": 23.7216 },
+        "validationRadiusMeters": 40,
+        "quiz": {
+          "question": "Second stop: the hill of the ancient homicide court, where Paul is said to have preached to the Athenians. Which rock is this?",
+          "options": ["Areopagus", "Pnyx", "Acropolis", "Philopappos"],
+          "correctAnswerIndex": 0
+        }
+      },
+      {
+        "order": 2,
+        "coordinates": { "lat": 37.9717, "lng": 23.7188 },
+        "validationRadiusMeters": 55,
+        "quiz": {
+          "question": "Third stop: the hill where the assembly met to vote and debate. Direct democracy was practised here. Which site is the birthplace of the ekklesia?",
+          "options": ["Pnyx", "Areopagus", "Agora", "Acropolis"],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  }
+]

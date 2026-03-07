@@ -7,8 +7,11 @@ import {
 } from '@tanstack/react-query'
 import api from '../api/axios'
 
-export type RouteType = 'real' | 'fantasy'
 export type RouteDifficulty = 'easy' | 'medium' | 'hard'
+/** Route content type for map symbols and filtering (urban exploration). */
+export type RouteContentType = 'history' | 'literature' | 'culture' | 'architecture' | 'sports'
+
+export const ROUTE_TYPES: RouteContentType[] = ['history', 'literature', 'culture', 'architecture', 'sports']
 
 export type ExplorationRoute = {
   id: string
@@ -18,8 +21,9 @@ export type ExplorationRoute = {
   is_public: boolean
   created_at: string
   updated_at: string
-  type?: RouteType
   difficulty?: RouteDifficulty
+  /** Content type: history, literature, culture, architecture, sports (affects map icon). */
+  type?: RouteContentType
   city?: string | null
   world?: string | null
   estimated_duration_min?: number | null
@@ -100,7 +104,7 @@ const keys = {
   completedCheckpoints: (routeId?: string) => [...keys.all, 'completedCheckpoints', routeId ?? 'all'] as const,
 }
 
-export type RouteTypeFilter = 'all' | 'real' | 'fantasy'
+export type RouteTypeFilter = RouteContentType | 'all'
 
 async function fetchRoutes(params?: { type?: RouteTypeFilter; includeCheckpoints?: boolean }): Promise<(ExplorationRoute & { checkpoints?: RouteCheckpoint[] })[]> {
   const type = params?.type
@@ -259,10 +263,9 @@ export type CreateFromDesignPayload = {
   name: string
   description?: string
   is_public?: boolean
-  type?: RouteType
   difficulty?: RouteDifficulty
+  type?: RouteContentType
   city?: string
-  world?: string
   checkpoints: DesignCheckpointSuggestion[]
 }
 
@@ -300,9 +303,8 @@ export type CreateFromBatchPayload = {
   description?: string
   /** Optional cover image URL for the route (parent image in route editor). */
   imageUrl?: string | null
-  type?: RouteType
+  type?: RouteContentType
   city?: string
-  world?: string
   radiusMeters?: number
   estimatedDurationMin?: number
   difficulty?: RouteDifficulty
@@ -327,10 +329,9 @@ export type CreateRoutePayload = {
   name: string
   description?: string
   is_public?: boolean
-  type?: RouteType
   difficulty?: RouteDifficulty
+  type?: RouteContentType
   city?: string
-  world?: string
   estimated_duration_min?: number
   radius_meters?: number
 }
@@ -354,10 +355,9 @@ export type UpdateRoutePayload = {
   name?: string
   description?: string
   is_public?: boolean
-  type?: RouteType
   difficulty?: RouteDifficulty
+  type?: RouteContentType
   city?: string
-  world?: string
   estimated_duration_min?: number
   radius_meters?: number
   is_active?: boolean

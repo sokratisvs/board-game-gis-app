@@ -1,6 +1,6 @@
 import { useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { MapContainer, TileLayer, useMapEvents, Marker, Popup, Polyline } from 'react-leaflet'
-import { Icon } from 'leaflet'
+import { divIcon } from 'leaflet'
 import { useNavigate } from 'react-router-dom'
 import 'leaflet/dist/leaflet.css'
 import LocationMarker from '../LocationMarker/LocationMarker'
@@ -13,6 +13,7 @@ import {
   useExplorationRoutes,
   useScanClue,
   type RouteTypeFilter,
+  type RouteContentType,
   type RouteCheckpoint,
 } from '../../hooks/useExplorationQueries'
 import PathConstants from '../../routes/pathConstants'
@@ -21,12 +22,35 @@ import './MapComponent.css'
 const DEFAULT_CENTER: [number, number] = [40.51906594602173, 21.679130381253447]
 const MATCHES_RADIUS_M = 50000 // 50 km for admin list
 
-const routePinIcon = new Icon({
-  className: 'route-marker',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconSize: [22, 36],
-  iconAnchor: [11, 36],
-})
+/** Map symbols per route type: history, literature, culture, architecture, sports. */
+const ROUTE_TYPE_SYMBOLS: Record<RouteContentType, string> = {
+  history: '📜',
+  literature: '📖',
+  culture: '🏛',
+  architecture: '⛪',
+  sports: '⚽',
+}
+
+function typeToIcon(routeType: RouteContentType) {
+  return divIcon({
+    html: `<span class="route-type-symbol" title="${routeType}">${ROUTE_TYPE_SYMBOLS[routeType]}</span>`,
+    className: 'route-type-marker',
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+  })
+}
+
+const typeIcons: Record<RouteContentType, ReturnType<typeof divIcon>> = {
+  history: typeToIcon('history'),
+  literature: typeToIcon('literature'),
+  culture: typeToIcon('culture'),
+  architecture: typeToIcon('architecture'),
+  sports: typeToIcon('sports'),
+}
+
+function getRoutePinIcon(routeType?: RouteContentType | null) {
+  return routeType && typeIcons[routeType] ? typeIcons[routeType] : typeIcons.history
+}
 
 function MapCenterUpdater({
   onCenterChange,
@@ -154,15 +178,18 @@ export default function MapComponent() {
       {user && (
         <div className="relative z-[10] mb-3 flex flex-wrap items-center gap-3 p-2 bg-white rounded-lg shadow border border-slate-200">
           <label className="flex items-center gap-1 text-sm min-w-0">
-            <span className="text-slate-600 hidden sm:inline">Routes:</span>
+            <span className="text-slate-600 hidden sm:inline">Type:</span>
             <select
               value={routeTypeFilter}
               onChange={(e) => setRouteTypeFilter(e.target.value as RouteTypeFilter)}
               className="border border-slate-300 rounded px-2 py-1 text-sm bg-white max-w-[10rem] sm:max-w-none"
             >
               <option value="all">All</option>
-              <option value="real">Real</option>
-              <option value="fantasy">Fantasy</option>
+              <option value="history">📜 History</option>
+              <option value="literature">📖 Literature</option>
+              <option value="culture">🏛 Culture</option>
+              <option value="architecture">🏛 Architecture</option>
+              <option value="sports">⚽ Sports</option>
             </select>
           </label>
         </div>
@@ -224,12 +251,12 @@ export default function MapComponent() {
           <Marker
             key={checkpoint.id}
             position={[checkpoint.lat, checkpoint.lng]}
-            icon={routePinIcon}
+            icon={getRoutePinIcon(route.type)}
           >
             <Popup>
               <div className="text-sm min-w-[200px] max-w-[320px]">
                 <p className="font-medium text-slate-800">{route.name}</p>
-                <p className="text-slate-500 text-xs">Checkpoint {checkpoint.sequenceOrder + 1} · {route.type ?? 'real'}</p>
+                <p className="text-slate-500 text-xs">Checkpoint {checkpoint.sequenceOrder + 1} · {route.type ?? 'history'}</p>
                 {checkpoint.imageUrl && (
                   <img
                     src={checkpoint.imageUrl}

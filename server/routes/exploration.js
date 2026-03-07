@@ -146,7 +146,58 @@ async function suggestRouteDesign(name, description) {
   }
 }
 
-/** Map DB route row (with optional r_* from routes join, first_cp for map) to API shape */
+/** SELECT list for routes metadata from routes r (with theme for content type). Use routesSelectWithoutTheme when theme column is missing (migration 024 not run). */
+const ROUTES_SELECT_WITH_THEME = 'r.type, r.difficulty, r.theme, r.city, r.world, r.estimated_duration_min, r.radius_meters, r.is_active, r.title, r.image_url AS route_image_url'
+const ROUTES_SELECT_WITHOUT_THEME = 'r.type, r.difficulty, r.city, r.world, r.estimated_duration_min, r.radius_meters, r.is_active, r.title, r.image_url AS route_image_url'
+
+/** Content types for exploration routes (map symbols, filtering). Exposed as "type" in API. */
+const ROUTE_TYPES = ['history', 'literature', 'culture', 'architecture', 'sports']
+const ROUTE_DIFFICULTIES = ['easy', 'medium', 'hard']
+
+function normalizeRouteType(t) {
+  return ROUTE_TYPES.includes(t) ? t : 'history'
+}
+
+function normalizeDifficulty(d) {
+  return ROUTE_DIFFICULTIES.includes(d) ? d : 'medium'
+}
+
+/**
+ * Run a query that may reference routes.theme; on undefined_column (42703) retry with buildQueries(false).
+ * buildQueries(useTheme) must return { text, values }. Returns the pg result.
+ */
+async function queryWithThemeFallback(pool, app, buildQueries) {
+  const useTheme = app.get('routes_has_theme') !== false
+  try {
+    const { text, values } = buildQueries(useTheme)
+    return await pool.query(text, values)
+  } catch (err) {
+    if (err.code === '42703' && useTheme) {
+      app.set('routes_has_theme', false)
+      const fallback = buildQueries(false)
+      return await pool.query(fallback.text, fallback.values)
+    }
+    throw err
+  }
+}
+
+/**
+ * Run a query that inserts/updates with theme column; on 42703 retry with the fallback query.
+ * withTheme and withoutTheme are { text, values }. Returns the pg result.
+ */
+async function queryWithThemeColumnFallback(pool, app, withTheme, withoutTheme) {
+  try {
+    return await pool.query(withTheme.text, withTheme.values)
+  } catch (err) {
+    if (err.code === '42703') {
+      app.set('routes_has_theme', false)
+      return await pool.query(withoutTheme.text, withoutTheme.values)
+    }
+    throw err
+  }
+}
+
+/** Map DB route row (with optional r_* from routes join, first_cp for map) to API shape. type = content type (theme) when present, else route type (real/fantasy). */
 function mapRouteRow(row) {
   const out = {
     id: row.id,
@@ -166,6 +217,9 @@ function mapRouteRow(row) {
     out.radius_meters = row.radius_meters
     out.is_active = row.is_active
     out.title = row.title
+  }
+  if (row.theme != null) {
+    out.type = row.theme
   }
   if (row.first_cp_lat != null && row.first_cp_lng != null) {
     out.firstCheckpointLat = parseFloat(row.first_cp_lat)
@@ -201,41 +255,42 @@ function mapCheckpointRow(row) {
 /**
  * GET /api/exploration/routes
  * List exploration routes (public ones for non-admin). Includes route metadata (type, difficulty, city, world) when linked.
- * Query: ?type=all|real|fantasy to filter by route type. ?includeCheckpoints=1 to include checkpoints (for map pins).
+ * Query: ?type=history|literature|culture|architecture|sports to filter by route type. ?includeCheckpoints=1 to include checkpoints (for map pins).
  * Includes firstCheckpointLat, firstCheckpointLng for map display.
  */
 // -----------------------------------------------------------------------------
 // Routes: list, detail, create, update, delete
 // -----------------------------------------------------------------------------
 
-router.get('/exploration/routes', async (req, res) => {
-  const pool = req.app.get('pool')
-  const isAdmin = req.session?.user?.type === 'admin'
-  const typeFilter =
-    req.query.type === 'real' || req.query.type === 'fantasy'
-      ? req.query.type
-      : null
-  const includeCheckpoints =
-    req.query.includeCheckpoints === '1' ||
-    req.query.includeCheckpoints === 'true'
-  try {
-    let query = `SELECT er.id, er.name, er.description, er.created_by, er.is_public, er.created_at, er.updated_at,
-              r.type, r.difficulty, r.city, r.world, r.estimated_duration_min, r.radius_meters, r.is_active, r.title, r.image_url AS route_image_url,
-              first_cp.lat AS first_cp_lat, first_cp.lng AS first_cp_lng, first_cp.image_url AS first_cp_image_url
-       FROM exploration_routes er
+const ROUTES_LIST_FROM_JOIN = `FROM exploration_routes er
        LEFT JOIN routes r ON er.route_id = r.id
        LEFT JOIN LATERAL (
          SELECT c.lat, c.lng, c.image_url FROM route_checkpoints c
          WHERE c.route_id = er.id ORDER BY c.sequence_order LIMIT 1
-       ) first_cp ON true
+       ) first_cp ON true`
+
+router.get('/exploration/routes', async (req, res) => {
+  const pool = req.app.get('pool')
+  const app = req.app
+  const isAdmin = req.session?.user?.type === 'admin'
+  const typeFilter = ROUTE_TYPES.includes(req.query.type) ? req.query.type : null
+  const includeCheckpoints =
+    req.query.includeCheckpoints === '1' ||
+    req.query.includeCheckpoints === 'true'
+  try {
+    const result = await queryWithThemeFallback(pool, app, (useTheme) => {
+      const routesSelect = useTheme ? ROUTES_SELECT_WITH_THEME : ROUTES_SELECT_WITHOUT_THEME
+      const values = [isAdmin]
+      if (typeFilter && useTheme) values.push(typeFilter)
+      let text = `SELECT er.id, er.name, er.description, er.created_by, er.is_public, er.created_at, er.updated_at,
+              ${routesSelect},
+              first_cp.lat AS first_cp_lat, first_cp.lng AS first_cp_lng, first_cp.image_url AS first_cp_image_url
+       ${ROUTES_LIST_FROM_JOIN}
        WHERE (er.is_public = true OR $1 = true)`
-    const params = [isAdmin]
-    if (typeFilter) {
-      params.push(typeFilter)
-      query += ` AND r.type = $${params.length}`
-    }
-    query += ' ORDER BY er.updated_at DESC'
-    const result = await pool.query(query, params)
+      if (typeFilter && useTheme) text += ` AND r.theme = $${values.length}`
+      text += ' ORDER BY er.updated_at DESC'
+      return { text, values }
+    })
     const routes = result.rows.map(mapRouteRow)
     if (routes.length > 0) {
       const routeIds = routes.map((r) => r.id)
@@ -253,7 +308,9 @@ router.get('/exploration/routes', async (req, res) => {
       }
       routes.forEach((r) => {
         const rid = r.id != null ? String(r.id) : null
-        r.totalXp = rid ? (xpByRoute[rid] ?? 0) : 0
+        const xp = rid ? (xpByRoute[rid] ?? 0) : 0
+        r.totalXp = xp
+        r.expectedPoints = xp
       })
     }
     if (includeCheckpoints && routes.length > 0) {
@@ -395,7 +452,7 @@ router.get('/exploration/quiz', requireAuth, async (req, res) => {
 
 /**
  * POST /api/exploration/routes
- * Create route (admin). Body: name, description, is_public, and optional type, difficulty, city, world, estimated_duration_min, radius_meters.
+ * Create route (admin). Body: name, description, is_public, and optional difficulty, type, city, estimated_duration_min, radius_meters. type = history|literature|culture|architecture|sports.
  */
 router.post(
   '/exploration/routes',
@@ -408,32 +465,45 @@ router.post(
       name,
       description,
       is_public,
-      type,
       difficulty,
+      type: bodyType,
       city,
-      world,
       estimated_duration_min,
       radius_meters,
     } = req.body || {}
-    const routeType = type === 'fantasy' ? 'fantasy' : 'real'
-    const routeDifficulty = ['easy', 'medium', 'hard'].includes(difficulty)
-      ? difficulty
-      : 'medium'
+    const routeDifficulty = normalizeDifficulty(difficulty)
+    const routeType = normalizeRouteType(bodyType)
     try {
-      const routeResult = await pool.query(
-        `INSERT INTO routes (title, description, type, difficulty, city, world, estimated_duration_min, radius_meters, is_active, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, NOW())
+      const routeResult = await queryWithThemeColumnFallback(
+        pool,
+        req.app,
+        {
+          text: `INSERT INTO routes (title, description, type, difficulty, theme, city, world, estimated_duration_min, radius_meters, is_active, updated_at)
+       VALUES ($1, $2, 'real', $3, $4, $5, NULL, $6, $7, true, NOW())
        RETURNING id`,
-        [
-          name || 'New route',
-          description || null,
-          routeType,
-          routeDifficulty,
-          city || null,
-          world || null,
-          estimated_duration_min ?? null,
-          radius_meters ?? null,
-        ]
+          values: [
+            name || 'New route',
+            description || null,
+            routeDifficulty,
+            routeType,
+            city || null,
+            estimated_duration_min ?? null,
+            radius_meters ?? null,
+          ],
+        },
+        {
+          text: `INSERT INTO routes (title, description, type, difficulty, city, world, estimated_duration_min, radius_meters, is_active, updated_at)
+       VALUES ($1, $2, 'real', $3, $4, NULL, $5, $6, true, NOW())
+       RETURNING id`,
+          values: [
+            name || 'New route',
+            description || null,
+            routeDifficulty,
+            city || null,
+            estimated_duration_min ?? null,
+            radius_meters ?? null,
+          ],
+        }
       )
       const routeId = routeResult.rows[0].id
       const erResult = await pool.query(
@@ -454,10 +524,11 @@ router.post(
         .json(
           mapRouteRow({
             ...row,
-            type: routeType,
+            type: 'real',
             difficulty: routeDifficulty,
+            theme: routeType,
             city: city || null,
-            world: world || null,
+            world: null,
             estimated_duration_min: estimated_duration_min ?? null,
             radius_meters: radius_meters ?? null,
             is_active: true,
@@ -526,18 +597,9 @@ router.post(
     const name = (body.name ?? body.title ?? '').trim() || null
     const description =
       (body.description != null ? String(body.description) : '').trim() || null
-    const type = body.type === 'fantasy' ? 'fantasy' : 'real'
-    const difficulty = ['easy', 'medium', 'hard'].includes(body.difficulty)
-      ? body.difficulty
-      : 'medium'
+    const difficulty = normalizeDifficulty(body.difficulty)
     const city =
-      type === 'real' && body.city != null
-        ? String(body.city).trim() || null
-        : null
-    const world =
-      type === 'fantasy' && body.world != null
-        ? String(body.world).trim() || null
-        : null
+      body.city != null ? String(body.city).trim() || null : null
     const radiusMeters =
       body.radiusMeters != null ? Math.max(0, Number(body.radiusMeters)) : null
     const estimatedDurationMin =
@@ -548,6 +610,7 @@ router.post(
       body.imageUrl != null || body.image_url != null
         ? String(body.imageUrl ?? body.image_url).trim() || null
         : null
+    const routeType = normalizeRouteType(body.type ?? body.theme)
     const rawCheckpoints = Array.isArray(body.checkpoints)
       ? body.checkpoints
       : []
@@ -558,28 +621,45 @@ router.post(
         .json({ message: 'checkpoints array required and must not be empty' })
     }
     try {
-      const rResult = await pool.query(
-        `INSERT INTO routes (title, description, type, difficulty, city, world, estimated_duration_min, radius_meters, image_url, is_active, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, NOW())
+      const rResult = await queryWithThemeColumnFallback(
+        pool,
+        req.app,
+        {
+          text: `INSERT INTO routes (title, description, type, difficulty, theme, city, world, estimated_duration_min, radius_meters, image_url, is_active, updated_at)
+       VALUES ($1, $2, 'real', $3, $4, $5, NULL, $6, $7, $8, true, NOW())
        RETURNING id`,
-        [
-          routeName,
-          description,
-          type,
-          difficulty,
-          city,
-          world,
-          estimatedDurationMin,
-          radiusMeters,
-          routeImageUrl,
-        ]
+          values: [
+            routeName,
+            description,
+            difficulty,
+            routeType,
+            city,
+            estimatedDurationMin,
+            radiusMeters,
+            routeImageUrl,
+          ],
+        },
+        {
+          text: `INSERT INTO routes (title, description, type, difficulty, city, world, estimated_duration_min, radius_meters, image_url, is_active, updated_at)
+       VALUES ($1, $2, 'real', $3, $4, NULL, $5, $6, $7, true, NOW())
+       RETURNING id`,
+          values: [
+            routeName,
+            description,
+            difficulty,
+            city,
+            estimatedDurationMin,
+            radiusMeters,
+            routeImageUrl,
+          ],
+        }
       )
       const metaRouteId = rResult.rows[0].id
       const routeResult = await pool.query(
         `INSERT INTO exploration_routes (name, description, created_by, is_public, route_id)
        VALUES ($1, $2, $3, true, $4)
        RETURNING id, name, description, created_by, is_public, created_at, updated_at`,
-        [name, description, userId ?? null, metaRouteId]
+        [routeName, description, userId ?? null, metaRouteId]
       )
       const route = routeResult.rows[0]
       const routeId = route.id
@@ -658,10 +738,11 @@ router.post(
       res.status(201).json({
         ...mapRouteRow({
           ...route,
-          type,
+          type: 'real',
           difficulty,
+          theme: routeType,
           city,
-          world,
+          world: null,
           estimated_duration_min: estimatedDurationMin,
           radius_meters: radiusMeters,
           is_active: true,
@@ -693,33 +774,44 @@ router.post(
       name,
       description,
       is_public,
-      type,
       difficulty,
+      type: bodyType,
       city,
-      world,
       checkpoints: rawCheckpoints,
     } = req.body || {}
     const checkpoints = Array.isArray(rawCheckpoints) ? rawCheckpoints : []
     if (!name || typeof name !== 'string' || !name.trim()) {
       return res.status(400).json({ message: 'name required' })
     }
-    const routeType = type === 'fantasy' ? 'fantasy' : 'real'
-    const routeDifficulty = ['easy', 'medium', 'hard'].includes(difficulty)
-      ? difficulty
-      : 'medium'
+    const routeDifficulty = normalizeDifficulty(difficulty)
+    const routeType = normalizeRouteType(bodyType)
     try {
-      const rResult = await pool.query(
-        `INSERT INTO routes (title, description, type, difficulty, city, world, is_active, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, true, NOW())
+      const rResult = await queryWithThemeColumnFallback(
+        pool,
+        req.app,
+        {
+          text: `INSERT INTO routes (title, description, type, difficulty, theme, city, world, is_active, updated_at)
+       VALUES ($1, $2, 'real', $3, $4, $5, NULL, true, NOW())
        RETURNING id`,
-        [
-          name.trim(),
-          description?.trim() || null,
-          routeType,
-          routeDifficulty,
-          city || null,
-          world || null,
-        ]
+          values: [
+            name.trim(),
+            description?.trim() || null,
+            routeDifficulty,
+            routeType,
+            city || null,
+          ],
+        },
+        {
+          text: `INSERT INTO routes (title, description, type, difficulty, city, world, is_active, updated_at)
+       VALUES ($1, $2, 'real', $3, $4, NULL, true, NOW())
+       RETURNING id`,
+          values: [
+            name.trim(),
+            description?.trim() || null,
+            routeDifficulty,
+            city || null,
+          ],
+        }
       )
       const metaRouteId = rResult.rows[0].id
       const routeResult = await pool.query(
@@ -783,10 +875,11 @@ router.post(
       res.status(201).json({
         ...mapRouteRow({
           ...route,
-          type: routeType,
+          type: 'real',
           difficulty: routeDifficulty,
+          theme: routeType,
           city: city || null,
-          world: world || null,
+          world: null,
           estimated_duration_min: null,
           radius_meters: null,
           is_active: true,
@@ -812,18 +905,22 @@ router.post(
  * GET /api/exploration/routes/:id
  * Get route with checkpoints (ordered).
  */
+const ROUTE_BY_ID_SELECT = (routesSelect) =>
+  `SELECT er.id, er.name, er.description, er.created_by, er.is_public, er.created_at, er.updated_at,
+       ${routesSelect}
+   FROM exploration_routes er
+   LEFT JOIN routes r ON er.route_id = r.id
+   WHERE er.id = $1`
+
 router.get('/exploration/routes/:id', async (req, res) => {
   const pool = req.app.get('pool')
+  const app = req.app
   const { id } = req.params
   try {
-    const routeResult = await pool.query(
-      `SELECT er.id, er.name, er.description, er.created_by, er.is_public, er.created_at, er.updated_at,
-              r.type, r.difficulty, r.city, r.world, r.estimated_duration_min, r.radius_meters, r.is_active, r.title, r.image_url AS route_image_url
-       FROM exploration_routes er
-       LEFT JOIN routes r ON er.route_id = r.id
-       WHERE er.id = $1`,
-      [id]
-    )
+    const routeResult = await queryWithThemeFallback(pool, app, (useTheme) => ({
+      text: ROUTE_BY_ID_SELECT(useTheme ? ROUTES_SELECT_WITH_THEME : ROUTES_SELECT_WITHOUT_THEME),
+      values: [id],
+    }))
     if (routeResult.rows.length === 0) {
       return res.status(404).json({ message: 'Route not found' })
     }
@@ -860,7 +957,7 @@ router.get('/exploration/routes/:id', async (req, res) => {
       description: r.description,
       createdAt: r.created_at,
     }))
-    res.json({ ...route, checkpoints, totalXp, recommendations })
+    res.json({ ...route, checkpoints, totalXp, expectedPoints: totalXp, recommendations })
   } catch (err) {
     if (err.code === '42P01')
       return res.status(404).json({ message: 'Route not found' })
@@ -884,8 +981,8 @@ router.patch(
       name,
       description,
       is_public,
-      type,
       difficulty,
+      type: patchType,
       city,
       world,
       estimated_duration_min,
@@ -927,16 +1024,13 @@ router.patch(
         const rUpdates = []
         const rValues = []
         let q = 1
-        if (type !== undefined && ['real', 'fantasy'].includes(type)) {
-          rUpdates.push(`type = $${q++}`)
-          rValues.push(type)
-        }
-        if (
-          difficulty !== undefined &&
-          ['easy', 'medium', 'hard'].includes(difficulty)
-        ) {
+        if (difficulty !== undefined && ROUTE_DIFFICULTIES.includes(difficulty)) {
           rUpdates.push(`difficulty = $${q++}`)
           rValues.push(difficulty)
+        }
+        if (patchType !== undefined && ROUTE_TYPES.includes(patchType) && req.app.get('routes_has_theme') !== false) {
+          rUpdates.push(`theme = $${q++}`)
+          rValues.push(patchType)
         }
         if (city !== undefined) {
           rUpdates.push(`city = $${q++}`)
@@ -985,14 +1079,10 @@ router.patch(
           }
         }
       }
-      const result = await pool.query(
-        `SELECT er.id, er.name, er.description, er.created_by, er.is_public, er.created_at, er.updated_at,
-              r.type, r.difficulty, r.city, r.world, r.estimated_duration_min, r.radius_meters, r.is_active, r.title, r.image_url AS route_image_url
-       FROM exploration_routes er
-       LEFT JOIN routes r ON er.route_id = r.id
-       WHERE er.id = $1`,
-        [id]
-      )
+      const result = await queryWithThemeFallback(pool, req.app, (useTheme) => ({
+        text: ROUTE_BY_ID_SELECT(useTheme ? ROUTES_SELECT_WITH_THEME : ROUTES_SELECT_WITHOUT_THEME),
+        values: [id],
+      }))
       if (result.rows.length === 0) {
         return res.status(404).json({ message: 'Route not found' })
       }
@@ -1021,6 +1111,7 @@ router.patch(
         [id]
       )
       route.totalXp = Number(xpResult.rows[0]?.total_xp ?? 0)
+      route.expectedPoints = route.totalXp
       res.json(route)
     } catch (err) {
       console.error(err)

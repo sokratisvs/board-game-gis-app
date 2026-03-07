@@ -14,7 +14,7 @@ import {
   type RouteCheckpoint,
   type CreateCheckpointPayload,
   type DesignCheckpointSuggestion,
-  type RouteType,
+  type RouteContentType,
   type RouteDifficulty,
 } from '../../hooks/useExplorationQueries'
 import PageLayout from '../PageLayout/PageLayout'
@@ -76,10 +76,9 @@ export default function RouteEditor() {
   const designSuggest = useDesignSuggest()
   const updateRoute = useUpdateRoute()
   const [aiSuggestions, setAiSuggestions] = useState<DesignCheckpointSuggestion[] | null>(null)
-  const [routeType, setRouteType] = useState<RouteType>('real')
+  const [routeType, setRouteType] = useState<RouteContentType>('history')
   const [routeDifficulty, setRouteDifficulty] = useState<RouteDifficulty>('medium')
   const [routeCity, setRouteCity] = useState('')
-  const [routeWorld, setRouteWorld] = useState('')
   const [routeCoverImageUrl, setRouteCoverImageUrl] = useState('')
   const [routeMetaDirty, setRouteMetaDirty] = useState(false)
   const [routeRecommendationIds, setRouteRecommendationIds] = useState<string[]>([])
@@ -89,24 +88,22 @@ export default function RouteEditor() {
 
   useEffect(() => {
     if (route) {
-      setRouteType((route.type as RouteType) ?? 'real')
+      setRouteType((route.type as RouteContentType) ?? 'history')
       setRouteDifficulty((route.difficulty as RouteDifficulty) ?? 'medium')
       setRouteCity(route.city ?? '')
-      setRouteWorld(route.world ?? '')
       setRouteCoverImageUrl((route as { imageUrl?: string }).imageUrl ?? '')
       setRouteRecommendationIds(route.recommendations?.map((r) => r.id) ?? [])
     }
-  }, [route?.id, route?.type, route?.difficulty, route?.city, route?.world, route?.recommendations, (route as { imageUrl?: string })?.imageUrl])
+  }, [route?.id, route?.type, route?.difficulty, route?.city, route?.recommendations, (route as { imageUrl?: string })?.imageUrl])
 
   const handleUpdateRouteMeta = () => {
     if (!routeId || !route) return
     updateRoute.mutate(
       {
         id: routeId,
-        type: routeType,
         difficulty: routeDifficulty,
-        city: routeType === 'real' ? routeCity.trim() || undefined : undefined,
-        world: routeType === 'fantasy' ? routeWorld.trim() || undefined : undefined,
+        type: routeType,
+        city: routeCity.trim() || undefined,
         image_url: routeCoverImageUrl.trim() || null,
         recommendationIds: routeRecommendationIds,
       },
@@ -594,11 +591,14 @@ export default function RouteEditor() {
                 <label className={labelClass}>Type</label>
                 <select
                   value={routeType}
-                  onChange={(e) => { setRouteType(e.target.value as RouteType); setRouteMetaDirty(true) }}
+                  onChange={(e) => { setRouteType(e.target.value as RouteContentType); setRouteMetaDirty(true) }}
                   className={inputClass}
                 >
-                  <option value="real">Real</option>
-                  <option value="fantasy">Fantasy</option>
+                  <option value="history">📜 History</option>
+                  <option value="literature">📖 Literature</option>
+                  <option value="culture">🏛 Culture</option>
+                  <option value="architecture">⛪ Architecture</option>
+                  <option value="sports">⚽ Sports</option>
                 </select>
               </div>
               <div>
@@ -614,30 +614,16 @@ export default function RouteEditor() {
                 </select>
               </div>
             </div>
-            {routeType === 'real' && (
-              <div className="mb-2">
-                <label className={labelClass}>City</label>
-                <input
-                  type="text"
-                  value={routeCity}
-                  onChange={(e) => { setRouteCity(e.target.value); setRouteMetaDirty(true) }}
-                  placeholder="e.g. Athens"
-                  className={inputClass}
-                />
-              </div>
-            )}
-            {routeType === 'fantasy' && (
-              <div className="mb-2">
-                <label className={labelClass}>World</label>
-                <input
-                  type="text"
-                  value={routeWorld}
-                  onChange={(e) => { setRouteWorld(e.target.value); setRouteMetaDirty(true) }}
-                  placeholder="e.g. Middle Earth"
-                  className={inputClass}
-                />
-              </div>
-            )}
+            <div className="mb-2">
+              <label className={labelClass}>City</label>
+              <input
+                type="text"
+                value={routeCity}
+                onChange={(e) => { setRouteCity(e.target.value); setRouteMetaDirty(true) }}
+                placeholder="e.g. Athens"
+                className={inputClass}
+              />
+            </div>
             <div className="mb-2">
               <label className={labelClass}>Route cover image URL</label>
               <input

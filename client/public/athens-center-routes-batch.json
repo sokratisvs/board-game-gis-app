@@ -2,7 +2,7 @@
   {
     "name": "Tomb of the Unknown Soldier",
     "description": "Single-clue route at the heart of modern Athens.",
-    "type": "real",
+    "type": "history",
     "city": "Athens",
     "estimatedDurationMin": 10,
     "difficulty": "easy",
@@ -27,7 +27,7 @@
   {
     "name": "Old Town",
     "description": "Single-clue route in the oldest neighborhood of Athens.",
-    "type": "real",
+    "type": "culture",
     "city": "Athens",
     "estimatedDurationMin": 10,
     "difficulty": "easy",
@@ -47,7 +47,7 @@
   {
     "name": "Temple of Olympian Zeus",
     "description": "Single-clue route at the largest temple of ancient Greece.",
-    "type": "real",
+    "type": "history",
     "city": "Athens",
     "estimatedDurationMin": 10,
     "difficulty": "easy",
@@ -67,7 +67,7 @@
   {
     "name": "Square and Bazaar",
     "description": "Single-clue route at the flea market and old monastery site.",
-    "type": "real",
+    "type": "culture",
     "city": "Athens",
     "estimatedDurationMin": 10,
     "difficulty": "easy",
@@ -87,7 +87,7 @@
   {
     "name": "Ancient Civic Heart",
     "description": "Single-clue route at the ancient marketplace and civic center.",
-    "type": "real",
+    "type": "history",
     "city": "Athens",
     "estimatedDurationMin": 10,
     "difficulty": "easy",
@@ -112,7 +112,7 @@
   {
     "name": "Ancient Cemetery",
     "description": "Single-clue route at the ancient potters' quarter and cemetery.",
-    "type": "real",
+    "type": "history",
     "city": "Athens",
     "estimatedDurationMin": 10,
     "difficulty": "easy",
@@ -132,7 +132,7 @@
   {
     "name": "Tower of the Winds",
     "description": "Single-clue route at the Roman Agora and the ancient clocktower.",
-    "type": "real",
+    "type": "history",
     "city": "Athens",
     "estimatedDurationMin": 10,
     "difficulty": "easy",
@@ -157,7 +157,7 @@
   {
     "name": "Lysikrates Monument",
     "description": "Single-clue route at the first monument to be supported by Corinthian columns on the outside.",
-    "type": "real",
+    "type": "history",
     "city": "Athens",
     "estimatedDurationMin": 10,
     "difficulty": "easy",
@@ -182,7 +182,7 @@
   {
     "name": "Zappeion",
     "description": "Single-clue route at the neoclassical exhibition hall and gardens.",
-    "type": "real",
+    "type": "sports",
     "city": "Athens",
     "estimatedDurationMin": 10,
     "difficulty": "easy",
@@ -202,7 +202,7 @@
   {
     "name": "Panathenaic Stadium",
     "description": "Single-clue route at the marble stadium that hosted the first modern Olympics.",
-    "type": "real",
+    "type": "sports",
     "city": "Athens",
     "estimatedDurationMin": 10,
     "difficulty": "easy",
@@ -227,7 +227,7 @@
   {
     "name": "Syntagma to Plaka",
     "description": "Two-clue route from the modern heart of the city to the old town.",
-    "type": "real",
+    "type": "culture",
     "city": "Athens",
     "estimatedDurationMin": 25,
     "difficulty": "easy",
@@ -257,7 +257,7 @@
   {
     "name": "Agora and Stoa of Attalos",
     "description": "Two-clue route in the Ancient Agora: civic center and museum.",
-    "type": "real",
+    "type": "history",
     "city": "Athens",
     "estimatedDurationMin": 25,
     "difficulty": "medium",
@@ -297,7 +297,7 @@
   {
     "name": "Hadrian to Zeus",
     "description": "Two-clue route from Hadrian's Gate to the Temple of Olympian Zeus.",
-    "type": "real",
+    "type": "history",
     "city": "Athens",
     "estimatedDurationMin": 20,
     "difficulty": "easy",
@@ -332,7 +332,7 @@
   {
     "name": "Roman Agora to Tower of the Winds",
     "description": "Two-clue route through the Roman market and its famous clocktower.",
-    "type": "real",
+    "type": "history",
     "city": "Athens",
     "estimatedDurationMin": 20,
     "difficulty": "easy",
@@ -372,7 +372,7 @@
   {
     "name": "Acropolis Three Landmarks",
     "description": "Three-clue route along the pedestrian street and the sacred rock.",
-    "type": "real",
+    "type": "history",
     "city": "Athens",
     "estimatedDurationMin": 35,
     "difficulty": "medium",
@@ -422,7 +422,7 @@
   {
     "name": "Three Hills – Acropolis, Areopagus, Pnyx",
     "description": "Three-clue route linking the Acropolis with the hills of justice and democracy.",
-    "type": "real",
+    "type": "history",
     "city": "Athens",
     "estimatedDurationMin": 45,
     "difficulty": "medium",
@@ -462,7 +462,7 @@
   {
     "name": "From Temple of Zeus to Kallimarmaro",
     "description": "Three-clue route from ancient religion to the modern Olympic revival.",
-    "type": "real",
+    "type": "sports",
     "city": "Athens",
     "estimatedDurationMin": 35,
     "difficulty": "medium",

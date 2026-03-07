@@ -10,7 +10,7 @@ import {
   useDeleteRoute,
   type ExplorationRoute,
   type DesignCheckpointSuggestion,
-  type RouteType,
+  type RouteContentType,
   type RouteDifficulty,
   type CreateFromBatchPayload,
 } from '../../hooks/useExplorationQueries'
@@ -18,6 +18,7 @@ import PageLayout from '../PageLayout/PageLayout'
 import Section from '../ui/Section'
 import Alert from '../ui/Alert'
 import LoadingMessage from '../ui/LoadingMessage'
+import PathConstants from '../../routes/pathConstants'
 
 const btnPrimary =
   'px-3 py-1.5 rounded text-sm font-medium border-none cursor-pointer transition bg-primary text-white hover:bg-primary-hover disabled:opacity-60'
@@ -27,10 +28,6 @@ const btnDanger =
   'px-3 py-1.5 rounded text-sm font-medium border-none cursor-pointer transition bg-red-600 text-white hover:bg-red-700'
 const inputClass =
   'w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
-
-function buildEditPath(id: string) {
-  return `/exploration/routes/${id}/edit`
-}
 
 export default function ExplorationRoutes() {
   const navigate = useNavigate()
@@ -49,10 +46,9 @@ export default function ExplorationRoutes() {
   const [createMode, setCreateMode] = useState<CreateMode>('manual')
   const [newName, setNewName] = useState('')
   const [newDescription, setNewDescription] = useState('')
-  const [newType, setNewType] = useState<RouteType>('real')
+  const [newType, setNewType] = useState<RouteContentType>('history')
   const [newDifficulty, setNewDifficulty] = useState<RouteDifficulty>('medium')
   const [newCity, setNewCity] = useState('')
-  const [newWorld, setNewWorld] = useState('')
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [aiSuggestions, setAiSuggestions] = useState<DesignCheckpointSuggestion[] | null>(null)
   const [batchJson, setBatchJson] = useState('')
@@ -65,10 +61,9 @@ export default function ExplorationRoutes() {
       {
         name: newName.trim(),
         description: newDescription.trim() || undefined,
-        type: newType,
         difficulty: newDifficulty,
-        city: newType === 'real' ? newCity.trim() || undefined : undefined,
-        world: newType === 'fantasy' ? newWorld.trim() || undefined : undefined,
+        type: newType,
+        city: newCity.trim() || undefined,
       },
       {
         onSuccess: (route) => {
@@ -76,8 +71,7 @@ export default function ExplorationRoutes() {
           setNewName('')
           setNewDescription('')
           setNewCity('')
-          setNewWorld('')
-          navigate(buildEditPath(route.id))
+          navigate(PathConstants.explorationRouteEdit(route.id))
         },
       }
     )
@@ -116,10 +110,9 @@ export default function ExplorationRoutes() {
         name: newName.trim(),
         description: newDescription.trim() || undefined,
         is_public: true,
-        type: newType,
         difficulty: newDifficulty,
-        city: newType === 'real' ? newCity.trim() || undefined : undefined,
-        world: newType === 'fantasy' ? newWorld.trim() || undefined : undefined,
+        type: newType,
+        city: newCity.trim() || undefined,
         checkpoints: aiSuggestions,
       },
       {
@@ -129,8 +122,7 @@ export default function ExplorationRoutes() {
           setNewName('')
           setNewDescription('')
           setNewCity('')
-          setNewWorld('')
-          navigate(buildEditPath(route.id))
+          navigate(PathConstants.explorationRouteEdit(route.id))
         },
       }
     )
@@ -166,12 +158,11 @@ export default function ExplorationRoutes() {
       title: name,
       description: parsed.description != null ? String(parsed.description) : undefined,
       imageUrl: routeImageUrl,
-      type: (parsed.type === 'fantasy' ? 'fantasy' : 'real') as RouteType,
       city: parsed.city != null ? String(parsed.city) : undefined,
-      world: parsed.world != null ? String(parsed.world) : undefined,
       radiusMeters: parsed.radiusMeters != null ? Number(parsed.radiusMeters) : undefined,
       estimatedDurationMin: parsed.estimatedDurationMin != null ? Number(parsed.estimatedDurationMin) : undefined,
       difficulty: (['easy', 'medium', 'hard'].includes(parsed.difficulty as string) ? parsed.difficulty : 'medium') as RouteDifficulty,
+      type: (['history', 'literature', 'culture', 'architecture', 'sports'].includes(parsed.type as string) ? parsed.type : (['history', 'literature', 'culture', 'architecture', 'sports'].includes(parsed.theme as string) ? parsed.theme : 'history')) as RouteContentType,
       checkpoints: checkpoints.map((c) => {
         return {
           order: Number(c.order ?? 0),
@@ -222,7 +213,7 @@ export default function ExplorationRoutes() {
       setBatchParseError(null)
       setShowCreate(false)
       setNewName('')
-      if (lastRoute) navigate(buildEditPath(lastRoute.id))
+      if (lastRoute) navigate(PathConstants.explorationRouteEdit(lastRoute.id))
     } catch (err) {
       setBatchParseError(err instanceof Error ? err.message : 'Import failed')
     } finally {
@@ -233,7 +224,7 @@ export default function ExplorationRoutes() {
   return (
     <PageLayout
       title="Quiz routes"
-      description="Real or fantasy quiz routes. Admin can create routes with checkpoints and quizzes, with AI help. Answer → Clue → Knowledge card → Discovery."
+      description="Quiz routes by type (history, literature, culture, architecture, sports). Admin can create routes with checkpoints and quizzes, with AI help. Answer → Clue → Knowledge card → Discovery."
     >
       {error && (
         <Alert variant="error" className="mb-4">
@@ -287,7 +278,7 @@ export default function ExplorationRoutes() {
                   <textarea
                     value={batchJson}
                     onChange={(e) => { setBatchJson(e.target.value); setBatchParseError(null) }}
-                    placeholder={'{\n  "type": "real",\n  "city": "Athens",\n  "radiusMeters": 1200,\n  "estimatedDurationMin": 45,\n  "difficulty": "medium",\n  "checkpoints": [\n    { "order": 1, "coordinates": { "lat": 37.9755, "lng": 23.7348 }, "validationRadiusMeters": 30, "quiz": { "question": "...", "options": ["A", "B", "C", "D"], "correctAnswerIndex": 1 } }\n  ]\n}'}
+                    placeholder={'{\n  "type": "history",\n  "city": "Athens",\n  "radiusMeters": 1200,\n  "estimatedDurationMin": 45,\n  "difficulty": "medium",\n  "checkpoints": [\n    { "order": 1, "coordinates": { "lat": 37.9755, "lng": 23.7348 }, "validationRadiusMeters": 30, "quiz": { "question": "...", "options": ["A", "B", "C", "D"], "correctAnswerIndex": 1 } }\n  ]\n}'}
                     className={inputClass + ' mb-2 font-mono text-xs'}
                     rows={14}
                   />
@@ -333,11 +324,14 @@ export default function ExplorationRoutes() {
                       <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
                       <select
                         value={newType}
-                        onChange={(e) => setNewType(e.target.value as RouteType)}
+                        onChange={(e) => setNewType(e.target.value as RouteContentType)}
                         className={inputClass}
                       >
-                        <option value="real">Real</option>
-                        <option value="fantasy">Fantasy</option>
+                        <option value="history">📜 History</option>
+                        <option value="literature">📖 Literature</option>
+                        <option value="culture">🏛 Culture</option>
+                        <option value="architecture">⛪ Architecture</option>
+                        <option value="sports">⚽ Sports</option>
                       </select>
                     </div>
                     <div>
@@ -353,30 +347,16 @@ export default function ExplorationRoutes() {
                       </select>
                     </div>
                   </div>
-                  {newType === 'real' && (
-                    <div className="mb-3">
-                      <label className="block text-sm font-medium text-slate-700 mb-1">City</label>
-                      <input
-                        type="text"
-                        value={newCity}
-                        onChange={(e) => setNewCity(e.target.value)}
-                        placeholder="e.g. Athens"
-                        className={inputClass}
-                      />
-                    </div>
-                  )}
-                  {newType === 'fantasy' && (
-                    <div className="mb-3">
-                      <label className="block text-sm font-medium text-slate-700 mb-1">World</label>
-                      <input
-                        type="text"
-                        value={newWorld}
-                        onChange={(e) => setNewWorld(e.target.value)}
-                        placeholder="e.g. Middle Earth"
-                        className={inputClass}
-                      />
-                    </div>
-                  )}
+                  <div className="mb-3">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">City</label>
+                    <input
+                      type="text"
+                      value={newCity}
+                      onChange={(e) => setNewCity(e.target.value)}
+                      placeholder="e.g. Athens"
+                      className={inputClass}
+                    />
+                  </div>
                   {createMode === 'ai' && (
                     <>
                       <div className="flex flex-wrap gap-2 mb-2">
@@ -417,7 +397,7 @@ export default function ExplorationRoutes() {
                     )}
                     <button
                       type="button"
-                      onClick={() => { setShowCreate(false); setNewName(''); setNewDescription(''); setNewCity(''); setNewWorld(''); setAiSuggestions(null) }}
+                      onClick={() => { setShowCreate(false); setNewName(''); setNewDescription(''); setNewCity(''); setAiSuggestions(null) }}
                       className={btnSecondary}
                     >
                       Cancel
@@ -450,14 +430,12 @@ export default function ExplorationRoutes() {
                           {r.name}
                         </h3>
                         <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                          {r.type ?? 'real'}
+                          {r.type ?? 'history'}
                         </span>
                       </div>
                       <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm m-0">
-                        <dt className="text-slate-500">City / World</dt>
-                        <dd className="text-slate-800 font-medium">
-                          {r.type === 'real' ? (r.city ?? '—') : (r.type === 'fantasy' ? (r.world ?? '—') : '—')}
-                        </dd>
+                        <dt className="text-slate-500">City</dt>
+                        <dd className="text-slate-800 font-medium">{r.city ?? '—'}</dd>
                         <dt className="text-slate-500">Difficulty</dt>
                         <dd className="text-slate-800">{r.difficulty ?? '—'}</dd>
                         <dt className="text-slate-500">Total XP</dt>
@@ -484,7 +462,7 @@ export default function ExplorationRoutes() {
                           <div className="flex gap-2">
                             <button
                               type="button"
-                              onClick={() => navigate(buildEditPath(r.id))}
+                              onClick={() => navigate(PathConstants.explorationRouteEdit(r.id))}
                               className={btnSecondary}
                             >
                               Edit
@@ -512,7 +490,7 @@ export default function ExplorationRoutes() {
                       <th className="p-3 text-left font-semibold text-slate-600">Name</th>
                       <th className="p-3 text-left font-semibold text-slate-600">Type</th>
                       <th className="p-3 text-left font-semibold text-slate-600">Difficulty</th>
-                      <th className="p-3 text-left font-semibold text-slate-600">City / World</th>
+                      <th className="p-3 text-left font-semibold text-slate-600">City</th>
                       <th className="p-3 text-left font-semibold text-slate-600">Total XP</th>
                       <th className="p-3 text-left font-semibold text-slate-600">Duration</th>
                       <th className="p-3 text-left font-semibold text-slate-600">Description</th>
@@ -528,7 +506,7 @@ export default function ExplorationRoutes() {
                         <td className="p-3 font-medium">{r.name}</td>
                         <td className="p-3 text-slate-600">{r.type ?? '—'}</td>
                         <td className="p-3 text-slate-600">{r.difficulty ?? '—'}</td>
-                        <td className="p-3 text-slate-600">{r.type === 'real' ? (r.city ?? '—') : (r.type === 'fantasy' ? (r.world ?? '—') : '—')}</td>
+                        <td className="p-3 text-slate-600">{r.city ?? '—'}</td>
                         <td className="p-3 font-medium text-slate-800">{r.totalXp ?? 0}</td>
                         <td className="p-3 text-slate-600">{r.estimated_duration_min != null ? `~${r.estimated_duration_min} min` : '—'}</td>
                         <td className="p-3 text-slate-600 max-w-[200px] truncate" title={r.description || undefined}>{r.description || '—'}</td>
@@ -538,7 +516,7 @@ export default function ExplorationRoutes() {
                             <div className="flex gap-2">
                               <button
                                 type="button"
-                                onClick={() => navigate(buildEditPath(r.id))}
+                                onClick={() => navigate(PathConstants.explorationRouteEdit(r.id))}
                                 className={btnSecondary}
                               >
                                 Edit
