@@ -1,0 +1,517 @@
+[
+  {
+    "name": "Tomb of the Unknown Soldier",
+    "description": "Single-clue route at the heart of modern Athens.",
+    "type": "real",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9755, "lng": 23.7357 },
+        "validationRadiusMeters": 40,
+        "quiz": {
+          "question": "Where do the evzones guard the Tomb of the Unknown Soldier and the Eternal Flame? This square took its name from the Constitution that the first king of Greece was forced to grant here.",
+          "options": [
+            "Syntagma Square",
+            "Acropolis",
+            "Temple of Olympian Zeus",
+            "Monastiraki"
+          ],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "Old Town",
+    "description": "Single-clue route in the oldest neighborhood of Athens.",
+    "type": "real",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9718, "lng": 23.732 },
+        "validationRadiusMeters": 50,
+        "quiz": {
+          "question": "The oldest continuously inhabited district of Athens, nestling under the Acropolis. Ottomans and locals left their mark on its narrow streets and neoclassical houses. Which neighborhood is this?",
+          "options": ["Plaka", "Psiri", "Monastiraki", "Kolonaki"],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "Temple of Olympian Zeus",
+    "description": "Single-clue route at the largest temple of ancient Greece.",
+    "type": "real",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9693, "lng": 23.7331 },
+        "validationRadiusMeters": 60,
+        "quiz": {
+          "question": "The largest temple in ancient Greece, begun in the 6th century BC and completed by the Roman emperor Hadrian. Which god was worshipped here?",
+          "options": ["Olympian Zeus", "Athena", "Apollo", "Poseidon"],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "Square and Bazaar",
+    "description": "Single-clue route at the flea market and old monastery site.",
+    "type": "real",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9757, "lng": 23.7261 },
+        "validationRadiusMeters": 45,
+        "quiz": {
+          "question": "The flea market and metro station bear the name of a small monastery that once stood here. Which district at the foot of the Acropolis is this?",
+          "options": ["Monastiraki", "Psiri", "Plaka", "Thissio"],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "Ancient Civic Heart",
+    "description": "Single-clue route at the ancient marketplace and civic center.",
+    "type": "real",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9745, "lng": 23.7214 },
+        "validationRadiusMeters": 80,
+        "quiz": {
+          "question": "Where did Socrates and the Athenians debate, trade, and run the city? The ancient marketplace and civic center of classical Athens.",
+          "options": [
+            "Ancient Agora",
+            "Roman Agora",
+            "Acropolis",
+            "Kerameikos"
+          ],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "Ancient Cemetery",
+    "description": "Single-clue route at the ancient potters' quarter and cemetery.",
+    "type": "real",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9788, "lng": 23.7183 },
+        "validationRadiusMeters": 70,
+        "quiz": {
+          "question": "This district took its name from the potters who worked here. It was also the main cemetery of ancient Athens, with the Sacred Gate leading to Eleusis. Which site is this?",
+          "options": ["Kerameikos", "Dipylon", "Academy", "Agora"],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "Tower of the Winds",
+    "description": "Single-clue route at the Roman Agora and the ancient clocktower.",
+    "type": "real",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9744, "lng": 23.7265 },
+        "validationRadiusMeters": 40,
+        "quiz": {
+          "question": "In the Roman Agora stands an octagonal marble tower that once told the time with a water clock and a wind vane. What is it called?",
+          "options": [
+            "Tower of the Winds",
+            "Horologion of Andronikos",
+            "Both A and B",
+            "Tower of Hadrian"
+          ],
+          "correctAnswerIndex": 2
+        }
+      }
+    ]
+  },
+  {
+    "name": "Lysikrates Monument",
+    "description": "Single-clue route at the first monument to be supported by Corinthian columns on the outside.",
+    "type": "real",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9705, "lng": 23.7312 },
+        "validationRadiusMeters": 35,
+        "quiz": {
+          "question": "This circular monument in Plaka was built by a choregos to support the tripod he won in a drama contest. It gave its name to the street. Which monument is this?",
+          "options": [
+            "Lysikrates Monument",
+            "Choragic Monument",
+            "Both",
+            "Monument of Agrippa"
+          ],
+          "correctAnswerIndex": 2
+        }
+      }
+    ]
+  },
+  {
+    "name": "Zappeion",
+    "description": "Single-clue route at the neoclassical exhibition hall and gardens.",
+    "type": "real",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9717, "lng": 23.7364 },
+        "validationRadiusMeters": 60,
+        "quiz": {
+          "question": "This building was donated by the Zappas family for the revival of the Olympic Games and now hosts exhibitions and summits. It stands in the National Garden. What is it called?",
+          "options": ["Zappeion", "Zappeio", "Both", "Olympion"],
+          "correctAnswerIndex": 2
+        }
+      }
+    ]
+  },
+  {
+    "name": "Panathenaic Stadium",
+    "description": "Single-clue route at the marble stadium that hosted the first modern Olympics.",
+    "type": "real",
+    "city": "Athens",
+    "estimatedDurationMin": 10,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9683, "lng": 23.7411 },
+        "validationRadiusMeters": 80,
+        "quiz": {
+          "question": "The only stadium in the world built entirely of marble. It hosted the Panathenaic Games in antiquity and the first modern Olympics in 1896. What is its popular name?",
+          "options": [
+            "Kallimarmaro",
+            "Panathenaic Stadium",
+            "Both",
+            "Olympic Stadium"
+          ],
+          "correctAnswerIndex": 2
+        }
+      }
+    ]
+  },
+  {
+    "name": "Syntagma to Plaka",
+    "description": "Two-clue route from the modern heart of the city to the old town.",
+    "type": "real",
+    "city": "Athens",
+    "estimatedDurationMin": 25,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9755, "lng": 23.7357 },
+        "validationRadiusMeters": 40,
+        "quiz": {
+          "question": "The heart of modern Athens, where the Constitution was proclaimed in the 19th century. Which square is this?",
+          "options": ["Syntagma Square", "Omonoia", "Monastiraki", "Kolonaki"],
+          "correctAnswerIndex": 0
+        }
+      },
+      {
+        "order": 1,
+        "coordinates": { "lat": 37.9718, "lng": 23.732 },
+        "validationRadiusMeters": 50,
+        "quiz": {
+          "question": "The oldest neighborhood of Athens, beneath the Acropolis, with Byzantine and Ottoman traces. Which area are you in?",
+          "options": ["Plaka", "Psiri", "Monastiraki", "Thissio"],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "Agora and Stoa of Attalos",
+    "description": "Two-clue route in the Ancient Agora: civic center and museum.",
+    "type": "real",
+    "city": "Athens",
+    "estimatedDurationMin": 25,
+    "difficulty": "medium",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9745, "lng": 23.7214 },
+        "validationRadiusMeters": 80,
+        "quiz": {
+          "question": "Where did Socrates and the Athenians debate and run the city? The ancient marketplace and civic center.",
+          "options": [
+            "Ancient Agora",
+            "Roman Agora",
+            "Acropolis",
+            "Kerameikos"
+          ],
+          "correctAnswerIndex": 0
+        }
+      },
+      {
+        "order": 1,
+        "coordinates": { "lat": 37.9752, "lng": 23.7224 },
+        "validationRadiusMeters": 45,
+        "quiz": {
+          "question": "This reconstructed building was a gift from a king of Pergamon. Which stoa houses the Agora Museum?",
+          "options": [
+            "Stoa of Attalos",
+            "Stoa Poikile",
+            "Stoa Basileios",
+            "Stoa of Zeus"
+          ],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "Hadrian to Zeus",
+    "description": "Two-clue route from Hadrian's Gate to the Temple of Olympian Zeus.",
+    "type": "real",
+    "city": "Athens",
+    "estimatedDurationMin": 20,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9697, "lng": 23.732 },
+        "validationRadiusMeters": 30,
+        "quiz": {
+          "question": "The Roman emperor Hadrian built this gate to mark the boundary between old and new Athens. What is it called?",
+          "options": [
+            "Arch of Hadrian",
+            "Propylaia",
+            "Gate of Athena",
+            "Roman Gate"
+          ],
+          "correctAnswerIndex": 0
+        }
+      },
+      {
+        "order": 1,
+        "coordinates": { "lat": 37.9693, "lng": 23.7331 },
+        "validationRadiusMeters": 60,
+        "quiz": {
+          "question": "The largest temple in Greece, completed by Hadrian. Which god was honoured here?",
+          "options": ["Olympian Zeus", "Athena", "Apollo", "Hadrian"],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "Roman Agora to Tower of the Winds",
+    "description": "Two-clue route through the Roman market and its famous clocktower.",
+    "type": "real",
+    "city": "Athens",
+    "estimatedDurationMin": 20,
+    "difficulty": "easy",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9742, "lng": 23.7272 },
+        "validationRadiusMeters": 50,
+        "quiz": {
+          "question": "Julius Caesar and Augustus funded this market square, separate from the older Greek Agora. What is it called?",
+          "options": [
+            "Roman Agora",
+            "Forum of Caesar",
+            "Agora of Augustus",
+            "Imperial Agora"
+          ],
+          "correctAnswerIndex": 0
+        }
+      },
+      {
+        "order": 1,
+        "coordinates": { "lat": 37.9744, "lng": 23.7265 },
+        "validationRadiusMeters": 40,
+        "quiz": {
+          "question": "Inside the Roman Agora, this tower once combined a water clock, sundials, and a wind vane. Name it.",
+          "options": [
+            "Tower of the Winds",
+            "Horologion",
+            "Aerides",
+            "Any of the above"
+          ],
+          "correctAnswerIndex": 3
+        }
+      }
+    ]
+  },
+  {
+    "name": "Acropolis Three Landmarks",
+    "description": "Three-clue route along the pedestrian street and the sacred rock.",
+    "type": "real",
+    "city": "Athens",
+    "estimatedDurationMin": 35,
+    "difficulty": "medium",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9698, "lng": 23.731 },
+        "validationRadiusMeters": 35,
+        "quiz": {
+          "question": "You walk along the pedestrian street that offers the first clear view of the sacred rock. Which landmark stands above you?",
+          "options": [
+            "Acropolis",
+            "Lycabettus",
+            "Philopappos Hill",
+            "Areopagus"
+          ],
+          "correctAnswerIndex": 0
+        }
+      },
+      {
+        "order": 1,
+        "coordinates": { "lat": 37.9715, "lng": 23.7265 },
+        "validationRadiusMeters": 70,
+        "quiz": {
+          "question": "Here the Parthenon was built for Athena. Which temple crowns the Acropolis?",
+          "options": [
+            "Parthenon",
+            "Erechtheion",
+            "Temple of Athena Nike",
+            "Propylaia"
+          ],
+          "correctAnswerIndex": 0
+        }
+      },
+      {
+        "order": 2,
+        "coordinates": { "lat": 37.9717, "lng": 23.7216 },
+        "validationRadiusMeters": 40,
+        "quiz": {
+          "question": "The hill where the council of elders met and where Paul is said to have preached. Which rock is this?",
+          "options": ["Areopagus", "Pnyx", "Philopappos", "Acropolis"],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "Three Hills – Acropolis, Areopagus, Pnyx",
+    "description": "Three-clue route linking the Acropolis with the hills of justice and democracy.",
+    "type": "real",
+    "city": "Athens",
+    "estimatedDurationMin": 45,
+    "difficulty": "medium",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9715, "lng": 23.7265 },
+        "validationRadiusMeters": 70,
+        "quiz": {
+          "question": "The sacred rock and the Parthenon. Which site was the religious and symbolic center of ancient Athens?",
+          "options": ["Acropolis", "Areopagus", "Pnyx", "Agora"],
+          "correctAnswerIndex": 0
+        }
+      },
+      {
+        "order": 1,
+        "coordinates": { "lat": 37.9717, "lng": 23.7216 },
+        "validationRadiusMeters": 40,
+        "quiz": {
+          "question": "The hill of the ancient homicide court and the place where Paul addressed the Athenians. Which rock is this?",
+          "options": ["Areopagus", "Pnyx", "Acropolis", "Philopappos"],
+          "correctAnswerIndex": 0
+        }
+      },
+      {
+        "order": 2,
+        "coordinates": { "lat": 37.972, "lng": 23.7188 },
+        "validationRadiusMeters": 50,
+        "quiz": {
+          "question": "Where did the Athenian assembly meet to vote and debate? The birthplace of direct democracy.",
+          "options": ["Pnyx", "Areopagus", "Agora", "Acropolis"],
+          "correctAnswerIndex": 0
+        }
+      }
+    ]
+  },
+  {
+    "name": "From Temple of Zeus to Kallimarmaro",
+    "description": "Three-clue route from ancient religion to the modern Olympic revival.",
+    "type": "real",
+    "city": "Athens",
+    "estimatedDurationMin": 35,
+    "difficulty": "medium",
+    "checkpoints": [
+      {
+        "order": 0,
+        "coordinates": { "lat": 37.9693, "lng": 23.7331 },
+        "validationRadiusMeters": 60,
+        "quiz": {
+          "question": "The largest temple in Greece, dedicated to the king of the gods. Hadrian completed it. Which temple is this?",
+          "options": [
+            "Temple of Olympian Zeus",
+            "Parthenon",
+            "Temple of Hephaestus",
+            "Olympieion"
+          ],
+          "correctAnswerIndex": 0
+        }
+      },
+      {
+        "order": 1,
+        "coordinates": { "lat": 37.9717, "lng": 23.7364 },
+        "validationRadiusMeters": 55,
+        "quiz": {
+          "question": "The Zappas family built this neoclassical hall to revive the Olympic idea. It stands next to the National Garden. What is it?",
+          "options": [
+            "Zappeion",
+            "Panathenaic Stadium",
+            "Olympic Museum",
+            "Athens Academy"
+          ],
+          "correctAnswerIndex": 0
+        }
+      },
+      {
+        "order": 2,
+        "coordinates": { "lat": 37.9683, "lng": 23.7411 },
+        "validationRadiusMeters": 80,
+        "quiz": {
+          "question": "The all-marble stadium where the first modern Olympics opened in 1896. Greeks call it Kallimarmaro. What is it?",
+          "options": [
+            "Panathenaic Stadium",
+            "Olympic Stadium",
+            "Kallimarmaro",
+            "A or C"
+          ],
+          "correctAnswerIndex": 3
+        }
+      }
+    ]
+  }
+]

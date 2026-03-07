@@ -57,6 +57,7 @@ export default function ExplorationRoutes() {
   const [aiSuggestions, setAiSuggestions] = useState<DesignCheckpointSuggestion[] | null>(null)
   const [batchJson, setBatchJson] = useState('')
   const [batchParseError, setBatchParseError] = useState<string | null>(null)
+  const [batchImporting, setBatchImporting] = useState(false)
 
   const handleCreate = () => {
     if (!newName.trim()) return
@@ -140,25 +141,15 @@ export default function ExplorationRoutes() {
     deleteRoute.mutate(deleteConfirmId, { onSettled: () => setDeleteConfirmId(null) })
   }
 
-  const handleImportBatch = () => {
-    setBatchParseError(null)
-    let parsed: Record<string, unknown>
-    try {
-      parsed = JSON.parse(batchJson) as Record<string, unknown>
-    } catch {
-      setBatchParseError('Invalid JSON')
-      return
-    }
+  function parseOneBatch(parsed: Record<string, unknown>, fallbackName: string): { payload: CreateFromBatchPayload } | { error: string } {
     const nameFromJson = (parsed.name ?? parsed.title) as string | undefined
-    const name = (nameFromJson && String(nameFromJson).trim()) || newName.trim()
+    const name = (nameFromJson && String(nameFromJson).trim()) || fallbackName.trim()
     if (!name) {
-      setBatchParseError('Route name required (set above or include "name"/"title" in JSON)')
-      return
+      return { error: 'Route name required (set above or include "name"/"title" in JSON)' }
     }
     const checkpoints = parsed.checkpoints as CreateFromBatchPayload['checkpoints'] | undefined
     if (!Array.isArray(checkpoints) || checkpoints.length === 0) {
-      setBatchParseError('JSON must include "checkpoints" array with at least one checkpoint')
-      return
+      return { error: 'JSON must include "checkpoints" array with at least one checkpoint' }
     }
     const payload: CreateFromBatchPayload = {
       name,
@@ -181,18 +172,48 @@ export default function ExplorationRoutes() {
         } : { question: '', options: [], correctAnswerIndex: 0 },
       })),
     }
-    createFromBatch.mutate(payload, {
-      onSuccess: (route) => {
-        setBatchJson('')
-        setBatchParseError(null)
-        setShowCreate(false)
-        setNewName('')
-        navigate(buildEditPath(route.id))
-      },
-      onError: (err) => {
-        setBatchParseError(err instanceof Error ? err.message : 'Import failed')
-      },
-    })
+    return { payload }
+  }
+
+  const handleImportBatch = async () => {
+    setBatchParseError(null)
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(batchJson)
+    } catch {
+      setBatchParseError('Invalid JSON')
+      return
+    }
+    const items: Record<string, unknown>[] = Array.isArray(parsed) ? parsed : [parsed as Record<string, unknown>]
+    const payloads: CreateFromBatchPayload[] = []
+    for (let i = 0; i < items.length; i++) {
+      const result = parseOneBatch(items[i], newName.trim() || (items.length === 1 ? '' : `Route ${i + 1}`))
+      if ('error' in result) {
+        setBatchParseError(items.length > 1 ? `Route ${i + 1}: ${result.error}` : result.error)
+        return
+      }
+      payloads.push(result.payload)
+    }
+    if (payloads.length === 0) {
+      setBatchParseError('No route(s) to import')
+      return
+    }
+    setBatchImporting(true)
+    try {
+      let lastRoute: { id: string } | null = null
+      for (let i = 0; i < payloads.length; i++) {
+        lastRoute = await createFromBatch.mutateAsync(payloads[i])
+      }
+      setBatchJson('')
+      setBatchParseError(null)
+      setShowCreate(false)
+      setNewName('')
+      if (lastRoute) navigate(buildEditPath(lastRoute.id))
+    } catch (err) {
+      setBatchParseError(err instanceof Error ? err.message : 'Import failed')
+    } finally {
+      setBatchImporting(false)
+    }
   }
 
   return (
@@ -248,7 +269,7 @@ export default function ExplorationRoutes() {
                     placeholder="e.g. Athens Old Town"
                     className={inputClass + ' mb-3'}
                   />
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Paste route JSON (route meta + checkpoints)</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Paste route JSON (one object or an array of route objects)</label>
                   <textarea
                     value={batchJson}
                     onChange={(e) => { setBatchJson(e.target.value); setBatchParseError(null) }}
@@ -261,10 +282,10 @@ export default function ExplorationRoutes() {
                     <button
                       type="button"
                       onClick={handleImportBatch}
-                      disabled={!batchJson.trim() || createFromBatch.isPending}
+                      disabled={!batchJson.trim() || createFromBatch.isPending || batchImporting}
                       className={btnPrimary}
                     >
-                      {createFromBatch.isPending ? 'Importing…' : 'Import and create route'}
+                      {createFromBatch.isPending || batchImporting ? 'Importing…' : 'Import and create route(s)'}
                     </button>
                     <button
                       type="button"
