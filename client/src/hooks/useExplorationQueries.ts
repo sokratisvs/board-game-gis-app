@@ -26,6 +26,8 @@ export type ExplorationRoute = {
   radius_meters?: number | null
   is_active?: boolean
   title?: string
+  /** Route cover image URL (from routes.image_url or first checkpoint image). */
+  imageUrl?: string | null
   /** First checkpoint position for map display (when route has checkpoints). */
   firstCheckpointLat?: number
   firstCheckpointLng?: number
@@ -283,6 +285,8 @@ export type BatchCheckpointInput = {
   order: number
   coordinates: { lat: number; lng: number }
   validationRadiusMeters?: number
+  /** Optional image URL for this clue (e.g. photo of the place); user can also submit a photo at the place and it will be stored here with consent. */
+  imageUrl?: string | null
   quiz: {
     question: string
     options: string[]
@@ -294,6 +298,8 @@ export type CreateFromBatchPayload = {
   name?: string
   title?: string
   description?: string
+  /** Optional cover image URL for the route (parent image in route editor). */
+  imageUrl?: string | null
   type?: RouteType
   city?: string
   world?: string
@@ -355,6 +361,8 @@ export type UpdateRoutePayload = {
   estimated_duration_min?: number
   radius_meters?: number
   is_active?: boolean
+  /** Route cover image URL (parent image in route editor). */
+  image_url?: string | null
   recommendationIds?: string[]
 }
 

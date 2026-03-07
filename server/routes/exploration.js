@@ -1,8 +1,53 @@
 const express = require('express')
+const path = require('path')
+const fs = require('fs')
 const router = express.Router()
+const multer = require('multer')
 const { requireAuth, requireAdmin } = require('../middleware/requireAdmin')
 
+// -----------------------------------------------------------------------------
+// Constants & config
+// -----------------------------------------------------------------------------
+
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+const GOOGLE_CLOUD_VISION_API_KEY = process.env.GOOGLE_CLOUD_VISION_API_KEY
+const VISION_MATCH_RADIUS_METERS = 600
+const UPLOAD_MAX_FILE_SIZE = 5 * 1024 * 1024 // 5 MB
+const IMAGE_MIME_REGEX = /^image\/(jpeg|png|gif|webp)$/i
+const IMAGE_EXT_REGEX = /\.(jpe?g|png|gif|webp)$/i
+
+const checkpointsUploadsDir = path.join(__dirname, '..', 'uploads', 'checkpoints')
+try {
+  fs.mkdirSync(checkpointsUploadsDir, { recursive: true })
+} catch {
+  // ignore
+}
+
+/** Parse boolean from req.query or req.body (for consent flags etc.). */
+function parseBoolParam(req, key) {
+  const v = req.body?.[key] ?? req.query?.[key]
+  return v === true || v === 'true'
+}
+
+/** Shared multer options for checkpoint image uploads. */
+const imageUploadOpts = {
+  limits: { fileSize: UPLOAD_MAX_FILE_SIZE },
+  fileFilter: (_req, file, cb) => {
+    cb(null, !!(file.mimetype && IMAGE_MIME_REGEX.test(file.mimetype)))
+  },
+}
+
+const checkpointPhotoUpload = multer({
+  ...imageUploadOpts,
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, checkpointsUploadsDir),
+    filename: (req, file, cb) => {
+      const ext = (file.originalname && path.extname(file.originalname)) || '.jpg'
+      const safe = ext.toLowerCase().match(IMAGE_EXT_REGEX) ? ext : '.jpg'
+      cb(null, `${req.params.id}_${req.params.order}_${Date.now()}${safe}`)
+    },
+  }),
+})
 
 /** Geocode a place name using Nominatim (OpenStreetMap). Returns { lat, lng } or null. */
 async function geocodePlace(placeName) {
@@ -126,7 +171,9 @@ function mapRouteRow(row) {
     out.firstCheckpointLat = parseFloat(row.first_cp_lat)
     out.firstCheckpointLng = parseFloat(row.first_cp_lng)
   }
-  if (row.first_cp_image_url != null) {
+  if (row.route_image_url != null) {
+    out.imageUrl = row.route_image_url
+  } else if (row.first_cp_image_url != null) {
     out.imageUrl = row.first_cp_image_url
   }
   return out
@@ -157,6 +204,10 @@ function mapCheckpointRow(row) {
  * Query: ?type=all|real|fantasy to filter by route type. ?includeCheckpoints=1 to include checkpoints (for map pins).
  * Includes firstCheckpointLat, firstCheckpointLng for map display.
  */
+// -----------------------------------------------------------------------------
+// Routes: list, detail, create, update, delete
+// -----------------------------------------------------------------------------
+
 router.get('/exploration/routes', async (req, res) => {
   const pool = req.app.get('pool')
   const isAdmin = req.session?.user?.type === 'admin'
@@ -169,7 +220,7 @@ router.get('/exploration/routes', async (req, res) => {
     req.query.includeCheckpoints === 'true'
   try {
     let query = `SELECT er.id, er.name, er.description, er.created_by, er.is_public, er.created_at, er.updated_at,
-              r.type, r.difficulty, r.city, r.world, r.estimated_duration_min, r.radius_meters, r.is_active, r.title,
+              r.type, r.difficulty, r.city, r.world, r.estimated_duration_min, r.radius_meters, r.is_active, r.title, r.image_url AS route_image_url,
               first_cp.lat AS first_cp_lat, first_cp.lng AS first_cp_lng, first_cp.image_url AS first_cp_image_url
        FROM exploration_routes er
        LEFT JOIN routes r ON er.route_id = r.id
@@ -461,7 +512,8 @@ const DEFAULT_LNG = 23.7275
 
 /**
  * POST /api/exploration/routes/from-batch
- * Create route + checkpoints from pasted JSON. Body: { name?, title?, description?, type?, city?, world?, radiusMeters?, estimatedDurationMin?, difficulty?, checkpoints: [{ order, coordinates: { lat, lng }, validationRadiusMeters?, quiz: { question, options, correctAnswerIndex } }] }
+ * Create route + checkpoints from pasted JSON. Body: one route object. name/title optional (default "Imported route"). checkpoints required.
+ * Frontend may send one or more objects by calling this endpoint per object.
  */
 router.post(
   '/exploration/routes/from-batch',
@@ -492,12 +544,14 @@ router.post(
       body.estimatedDurationMin != null
         ? Math.max(0, Number(body.estimatedDurationMin))
         : null
+    const routeImageUrl =
+      body.imageUrl != null || body.image_url != null
+        ? String(body.imageUrl ?? body.image_url).trim() || null
+        : null
     const rawCheckpoints = Array.isArray(body.checkpoints)
       ? body.checkpoints
       : []
-    if (!name) {
-      return res.status(400).json({ message: 'name or title required' })
-    }
+    const routeName = name || 'Imported route'
     if (rawCheckpoints.length === 0) {
       return res
         .status(400)
@@ -505,11 +559,11 @@ router.post(
     }
     try {
       const rResult = await pool.query(
-        `INSERT INTO routes (title, description, type, difficulty, city, world, estimated_duration_min, radius_meters, is_active, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, NOW())
+        `INSERT INTO routes (title, description, type, difficulty, city, world, estimated_duration_min, radius_meters, image_url, is_active, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, NOW())
        RETURNING id`,
         [
-          name,
+          routeName,
           description,
           type,
           difficulty,
@@ -517,6 +571,7 @@ router.post(
           world,
           estimatedDurationMin,
           radiusMeters,
+          routeImageUrl,
         ]
       )
       const metaRouteId = rResult.rows[0].id
@@ -556,15 +611,20 @@ router.post(
         const quizOpts = buildQuizOptions(quiz)
         const quizQuestion =
           quiz && quiz.question != null ? String(quiz.question).trim() : null
+        const cpImageUrl =
+          c.imageUrl != null || c.image_url != null
+            ? String(c.imageUrl ?? c.image_url).trim() || null
+            : null
         await pool.query(
           `INSERT INTO route_checkpoints (route_id, sequence_order, lat, lng, clue_text, image_url, knowledge_card, xp_awarded, quiz_question, quiz_options, validation_radius_meters)
-         VALUES ($1, $2, $3, $4, $5, NULL, NULL, 10, $6, $7, $8)`,
+         VALUES ($1, $2, $3, $4, $5, $6, NULL, 10, $7, $8, $9)`,
           [
             routeId,
             sequenceOrder,
             lat,
             lng,
             clueText,
+            cpImageUrl,
             quizQuestion,
             quizOpts ? JSON.stringify(quizOpts) : null,
             validationRadiusMeters,
@@ -758,7 +818,7 @@ router.get('/exploration/routes/:id', async (req, res) => {
   try {
     const routeResult = await pool.query(
       `SELECT er.id, er.name, er.description, er.created_by, er.is_public, er.created_at, er.updated_at,
-              r.type, r.difficulty, r.city, r.world, r.estimated_duration_min, r.radius_meters, r.is_active, r.title
+              r.type, r.difficulty, r.city, r.world, r.estimated_duration_min, r.radius_meters, r.is_active, r.title, r.image_url AS route_image_url
        FROM exploration_routes er
        LEFT JOIN routes r ON er.route_id = r.id
        WHERE er.id = $1`,
@@ -767,7 +827,9 @@ router.get('/exploration/routes/:id', async (req, res) => {
     if (routeResult.rows.length === 0) {
       return res.status(404).json({ message: 'Route not found' })
     }
-    const route = mapRouteRow(routeResult.rows[0])
+    const row0 = routeResult.rows[0]
+    const route = mapRouteRow(row0)
+    if (row0.route_image_url) route.imageUrl = row0.route_image_url
     const checkpointsResult = await pool.query(
       `SELECT id, route_id, sequence_order, lat, lng, clue_text, image_url, knowledge_card, xp_awarded, quiz_question, quiz_options, created_at
        FROM route_checkpoints
@@ -777,7 +839,7 @@ router.get('/exploration/routes/:id', async (req, res) => {
     )
     const checkpoints = checkpointsResult.rows.map((row) => mapCheckpointRow(row))
     const totalXp = checkpoints.reduce((sum, c) => sum + (c.xpAwarded ?? 0), 0)
-    if (checkpoints.length > 0 && checkpoints[0].imageUrl != null) {
+    if (route.imageUrl == null && checkpoints.length > 0 && checkpoints[0].imageUrl != null) {
       route.imageUrl = checkpoints[0].imageUrl
     }
     const recResult = await pool.query(
@@ -829,6 +891,7 @@ router.patch(
       estimated_duration_min,
       radius_meters,
       is_active,
+      image_url,
       recommendationIds,
     } = req.body || {}
     try {
@@ -895,6 +958,10 @@ router.patch(
           rUpdates.push(`is_active = $${q++}`)
           rValues.push(!!is_active)
         }
+        if (image_url !== undefined) {
+          rUpdates.push(`image_url = $${q++}`)
+          rValues.push(image_url != null ? String(image_url).trim() || null : null)
+        }
         if (rUpdates.length > 0) {
           rUpdates.push('updated_at = NOW()')
           rValues.push(routeId)
@@ -920,7 +987,7 @@ router.patch(
       }
       const result = await pool.query(
         `SELECT er.id, er.name, er.description, er.created_by, er.is_public, er.created_at, er.updated_at,
-              r.type, r.difficulty, r.city, r.world, r.estimated_duration_min, r.radius_meters, r.is_active, r.title
+              r.type, r.difficulty, r.city, r.world, r.estimated_duration_min, r.radius_meters, r.is_active, r.title, r.image_url AS route_image_url
        FROM exploration_routes er
        LEFT JOIN routes r ON er.route_id = r.id
        WHERE er.id = $1`,
@@ -929,7 +996,9 @@ router.patch(
       if (result.rows.length === 0) {
         return res.status(404).json({ message: 'Route not found' })
       }
-      const route = mapRouteRow(result.rows[0])
+      const patchRow = result.rows[0]
+      const route = mapRouteRow(patchRow)
+      if (patchRow.route_image_url) route.imageUrl = patchRow.route_image_url
       const recResult = await pool.query(
         `SELECT r.id, r.type, r.name, r.external_id, r.lat, r.lng, r.description, r.created_at
        FROM route_recommendations rr
@@ -995,69 +1064,14 @@ router.delete(
   }
 )
 
+// -----------------------------------------------------------------------------
+// Checkpoints: list, create, update, delete
+// -----------------------------------------------------------------------------
+
 /**
  * GET /api/exploration/routes/:id/checkpoints
  * List checkpoints for a route (ordered).
  */
-/** Map DB quiz_question + quiz_options to API { question, options, correctAnswerIndex }. */
-function mapRowToQuiz(row) {
-  if (
-    row.quiz_question == null &&
-    (!row.quiz_options ||
-      !Array.isArray(row.quiz_options) ||
-      row.quiz_options.length === 0)
-  ) {
-    return null
-  }
-  const opts = Array.isArray(row.quiz_options) ? row.quiz_options : []
-  const options = opts.map((o) =>
-    o && o.optionText != null
-      ? String(o.optionText)
-      : o && o.option_text != null
-        ? String(o.option_text)
-        : ''
-  )
-  const correctIndex = opts.findIndex(
-    (o) => o && (o.isCorrect === true || o.is_correct === true)
-  )
-  return {
-    question: row.quiz_question != null ? String(row.quiz_question) : '',
-    options: options.length ? options : [],
-    correctAnswerIndex: correctIndex >= 0 ? correctIndex : 0,
-  }
-}
-
-/**
- * Build RouteKnowledgeCard for API: merge knowledge_card JSON with quiz (question, answers, correctAnswerIndex).
- */
-function buildRouteKnowledgeCard(row) {
-  const base =
-    row.knowledge_card && typeof row.knowledge_card === 'object'
-      ? { ...row.knowledge_card }
-      : {}
-  const quiz = mapRowToQuiz(row)
-  if (quiz) {
-    base.question = quiz.question
-    base.answers = quiz.options
-    base.correctAnswerIndex = quiz.correctAnswerIndex
-  }
-  return Object.keys(base).length ? base : null
-}
-
-/** Build quiz_options JSON from API { question, options, correctAnswerIndex }. */
-function buildQuizOptions(quiz) {
-  if (!quiz || !Array.isArray(quiz.options) || quiz.options.length === 0)
-    return null
-  const correctIndex = Math.max(
-    0,
-    Math.min(Number(quiz.correctAnswerIndex) || 0, quiz.options.length - 1)
-  )
-  return quiz.options.map((text, i) => ({
-    optionText: String(text ?? ''),
-    isCorrect: i === correctIndex,
-  }))
-}
-
 router.get(
   '/exploration/routes/:id/checkpoints',
   requireAuth,
@@ -1102,6 +1116,197 @@ router.get(
     }
   }
 )
+
+/** Map DB quiz_question + quiz_options to API { question, options, correctAnswerIndex }. */
+function mapRowToQuiz(row) {
+  if (
+    row.quiz_question == null &&
+    (!row.quiz_options ||
+      !Array.isArray(row.quiz_options) ||
+      row.quiz_options.length === 0)
+  ) {
+    return null
+  }
+  const opts = Array.isArray(row.quiz_options) ? row.quiz_options : []
+  const options = opts.map((o) =>
+    o && o.optionText != null
+      ? String(o.optionText)
+      : o && o.option_text != null
+        ? String(o.option_text)
+        : ''
+  )
+  const correctIndex = opts.findIndex(
+    (o) => o && (o.isCorrect === true || o.is_correct === true)
+  )
+  return {
+    question: row.quiz_question != null ? String(row.quiz_question) : '',
+    options: options.length ? options : [],
+    correctAnswerIndex: correctIndex >= 0 ? correctIndex : 0,
+  }
+}
+
+/** Build RouteKnowledgeCard for API: merge knowledge_card JSON with quiz (question, answers, correctAnswerIndex). */
+function buildRouteKnowledgeCard(row) {
+  const base =
+    row.knowledge_card && typeof row.knowledge_card === 'object'
+      ? { ...row.knowledge_card }
+      : {}
+  const quiz = mapRowToQuiz(row)
+  if (quiz) {
+    base.question = quiz.question
+    base.answers = quiz.options
+    base.correctAnswerIndex = quiz.correctAnswerIndex
+  }
+  return Object.keys(base).length ? base : null
+}
+
+/** Build quiz_options JSON from API { question, options, correctAnswerIndex }. */
+function buildQuizOptions(quiz) {
+  if (!quiz || !Array.isArray(quiz.options) || quiz.options.length === 0)
+    return null
+  const correctIndex = Math.max(
+    0,
+    Math.min(Number(quiz.correctAnswerIndex) || 0, quiz.options.length - 1)
+  )
+  return quiz.options.map((text, i) => ({
+    optionText: String(text ?? ''),
+    isCorrect: i === correctIndex,
+  }))
+}
+
+/**
+ * Build API response for clue/checkpoint content (photo, photo-for-clue, play).
+ * row: DB checkpoint row. overrides: { imageUrl?, selfieUrl?, visionConfirmed? } merged into result.
+ */
+function buildClueResponseFromRow(row, overrides = {}) {
+  const quiz = mapRowToQuiz(row)
+  const out = {
+    clueText: row.clue_text,
+    imageUrl: row.image_url || null,
+    knowledgeCard: buildRouteKnowledgeCard(row),
+    nearbyRecommendations: row.nearby_recommendations || [],
+    xpAwarded: row.xp_awarded ?? 0,
+    ...overrides,
+  }
+  if (quiz) out.quiz = quiz
+  return out
+}
+
+/** SQL: fetch one checkpoint by route_id and sequence_order, with nearby_recommendations. */
+const SELECT_CHECKPOINT_BY_ORDER = `
+  SELECT c.id, c.sequence_order, c.lat, c.lng, c.clue_text, c.image_url, c.quiz_question, c.quiz_options, c.knowledge_card, c.xp_awarded,
+    (SELECT json_agg(json_build_object('type', r.type, 'id', r.external_id))
+     FROM route_checkpoint_recommendations cpr
+     JOIN recommendations r ON r.id = cpr.recommendation_id
+     WHERE cpr.checkpoint_id = c.id) AS nearby_recommendations
+  FROM route_checkpoints c
+  WHERE c.route_id = $1 AND c.sequence_order = $2
+`
+
+/** Haversine distance in meters between two lat/lng points. */
+function haversineMeters(lat1, lng1, lat2, lng2) {
+  const R = 6371000
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLng = ((lng2 - lng1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
+}
+
+/**
+ * Call Google Cloud Vision API: LANDMARK_DETECTION + WEB_DETECTION.
+ * imageBase64: raw base64 string (no data URL prefix).
+ * Returns { landmarkAnnotations, webDetection } from first response, or null on error.
+ */
+async function visionAnnotate(imageBase64) {
+  if (!GOOGLE_CLOUD_VISION_API_KEY) return null
+  const url = `https://vision.googleapis.com/v1/images:annotate?key=${encodeURIComponent(GOOGLE_CLOUD_VISION_API_KEY)}`
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        requests: [
+          {
+            image: { content: imageBase64 },
+            features: [
+              { type: 'LANDMARK_DETECTION', maxResults: 5 },
+              { type: 'WEB_DETECTION', maxResults: 5 },
+            ],
+          },
+        ],
+      }),
+    })
+    const data = await res.json()
+    if (data.responses?.[0]?.error) {
+      console.warn('Vision API error', data.responses[0].error)
+      return null
+    }
+    const r = data.responses[0] || {}
+    return {
+      landmarkAnnotations: r.landmarkAnnotations || [],
+      webDetection: r.webDetection || {},
+    }
+  } catch (e) {
+    console.warn('Vision request failed', e.message)
+    return null
+  }
+}
+
+/**
+ * Decide if Vision result matches this quiz point (checkpoint).
+ * - Landmark: any detected landmark location within VISION_MATCH_RADIUS_METERS of checkpoint.
+ * - Web: any webEntity description or bestGuessLabel that appears in clueOrQuestion (case-insensitive).
+ */
+function visionMatchesCheckpoint(visionResult, checkpointLat, checkpointLng, clueOrQuestion) {
+  if (!visionResult) return false
+  const text = (clueOrQuestion || '').toLowerCase()
+  const words = text.split(/\s+/).filter((w) => w.length > 3)
+  if (visionResult.landmarkAnnotations?.length) {
+    for (const ann of visionResult.landmarkAnnotations) {
+      const locs = ann.locations || []
+      for (const loc of locs) {
+        const lat = loc.latLng?.latitude ?? loc.latLng?.lat
+        const lng = loc.latLng?.longitude ?? loc.latLng?.lng
+        if (lat != null && lng != null) {
+          const dist = haversineMeters(checkpointLat, checkpointLng, lat, lng)
+          if (dist <= VISION_MATCH_RADIUS_METERS) return true
+        }
+      }
+    }
+  }
+  const web = visionResult.webDetection || {}
+  const labels = [
+    ...(web.webEntities || []).map((e) => (e.description || '').toLowerCase()),
+    ...(web.bestGuessLabels || []).map((l) => (l.label || '').toLowerCase()),
+  ].filter(Boolean)
+  for (const label of labels) {
+    for (const word of words) {
+      if (word.length > 3 && label.includes(word)) return true
+    }
+    if (label.length > 4 && text.includes(label)) return true
+  }
+  return false
+}
+
+/** Multer for photo-for-clue: photo (required) + optional selfie. */
+const photoForClueUpload = multer({
+  ...imageUploadOpts,
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, checkpointsUploadsDir),
+    filename: (req, file, cb) => {
+      const ext = (file.originalname && path.extname(file.originalname)) || '.jpg'
+      const safe = ext.toLowerCase().match(IMAGE_EXT_REGEX) ? ext : '.jpg'
+      const prefix = file.fieldname === 'selfie' ? 'selfie_' : 'photo_'
+      cb(null, `${prefix}${req.params.id}_${req.params.order}_${Date.now()}${safe}`)
+    },
+  }),
+}).fields([{ name: 'photo', maxCount: 1 }, { name: 'selfie', maxCount: 1 }])
 
 /**
  * POST /api/exploration/routes/:id/checkpoints
@@ -1341,10 +1546,137 @@ router.delete(
   }
 )
 
+// -----------------------------------------------------------------------------
+// Photo upload: clue (optional camera after wrong answer)
+// -----------------------------------------------------------------------------
+
+/**
+ * POST /api/exploration/routes/:id/checkpoints/:order/photo
+ * Upload a photo at the checkpoint location. Returns stored clue + quiz.
+ * Body: multipart "photo". Query/body: consentToSaveImage to store as checkpoint image_url.
+ */
+router.post(
+  '/exploration/routes/:id/checkpoints/:order/photo',
+  requireAuth,
+  checkpointPhotoUpload.single('photo'),
+  async (req, res) => {
+    const pool = req.app.get('pool')
+    const { id: routeId, order } = req.params
+    const seq = parseInt(order, 10)
+    if (Number.isNaN(seq) || seq < 0) {
+      return res.status(400).json({ message: 'Invalid sequence order' })
+    }
+    const consentToSaveImage = parseBoolParam(req, 'consentToSaveImage')
+    try {
+      let imageUrlOverride = null
+      if (req.file) {
+        imageUrlOverride = `/api/uploads/checkpoints/${req.file.filename}`
+        if (consentToSaveImage) {
+          await pool.query(
+            `UPDATE route_checkpoints SET image_url = $1 WHERE route_id = $2 AND sequence_order = $3`,
+            [imageUrlOverride, routeId, seq]
+          )
+        }
+      }
+      const cpResult = await pool.query(SELECT_CHECKPOINT_BY_ORDER, [routeId, seq])
+      if (cpResult.rows.length === 0) {
+        return res.status(404).json({ message: 'Checkpoint not found' })
+      }
+      const row = cpResult.rows[0]
+      const out = buildClueResponseFromRow(row, {
+        imageUrl: imageUrlOverride ?? row.image_url ?? null,
+      })
+      res.json(out)
+    } catch (err) {
+      if (err.code === '42P01')
+        return res.status(404).json({ message: 'Route not found' })
+      console.error(err)
+      res.status(500).json({ message: 'Error processing photo' })
+    }
+  }
+)
+
+/**
+ * POST /api/exploration/routes/:id/checkpoints/:order/photo-for-clue
+ * After a wrong answer, user can use camera to get the stored clue. Always returns stored clue + quiz.
+ * Optional fallback: if GOOGLE_CLOUD_VISION_API_KEY is set, Vision (landmark + web detection) is used
+ * to confirm the photo matches this quiz point; when Vision is not set or does not match, the clue is
+ * still returned (Vision is not required).
+ * Body: multipart "photo" (required), optional "selfie". Query/body: consentToSaveImage, consentToSaveSelfie.
+ */
+router.post(
+  '/exploration/routes/:id/checkpoints/:order/photo-for-clue',
+  requireAuth,
+  photoForClueUpload,
+  async (req, res) => {
+    const pool = req.app.get('pool')
+    const { id: routeId, order } = req.params
+    const seq = parseInt(order, 10)
+    if (Number.isNaN(seq) || seq < 0) {
+      return res.status(400).json({ message: 'Invalid sequence order' })
+    }
+    const photoFile = req.files?.photo?.[0]
+    if (!photoFile) {
+      return res.status(400).json({ message: 'Missing photo: send multipart form with field "photo"' })
+    }
+    const consentToSaveImage = parseBoolParam(req, 'consentToSaveImage')
+    const consentToSaveSelfie = parseBoolParam(req, 'consentToSaveSelfie')
+
+    try {
+      const cpResult = await pool.query(SELECT_CHECKPOINT_BY_ORDER, [routeId, seq])
+      if (cpResult.rows.length === 0) {
+        return res.status(404).json({ message: 'Checkpoint not found' })
+      }
+      const row = cpResult.rows[0]
+
+      // Optional: run Vision to set visionConfirmed (does not block response)
+      let visionConfirmed = null
+      if (GOOGLE_CLOUD_VISION_API_KEY) {
+        const lat = parseFloat(row.lat)
+        const lng = parseFloat(row.lng)
+        const clueOrQuestion = [row.clue_text, row.quiz_question].filter(Boolean).join(' ')
+        const imageBase64 = fs.readFileSync(photoFile.path, { encoding: 'base64' })
+        const visionResult = await visionAnnotate(imageBase64)
+        visionConfirmed = visionMatchesCheckpoint(visionResult, lat, lng, clueOrQuestion)
+      }
+
+      let imageUrl = `/api/uploads/checkpoints/${photoFile.filename}`
+      if (consentToSaveImage) {
+        await pool.query(
+          `UPDATE route_checkpoints SET image_url = $1 WHERE route_id = $2 AND sequence_order = $3`,
+          [imageUrl, routeId, seq]
+        )
+      }
+
+      const selfieFile = req.files?.selfie?.[0]
+      const selfieUrl =
+        selfieFile && consentToSaveSelfie
+          ? `/api/uploads/checkpoints/${selfieFile.filename}`
+          : null
+
+      const overrides = { imageUrl }
+      if (selfieUrl) overrides.selfieUrl = selfieUrl
+      if (visionConfirmed !== null) overrides.visionConfirmed = visionConfirmed
+      const out = buildClueResponseFromRow(row, overrides)
+      res.json(out)
+    } catch (err) {
+      if (err.code === '42P01') {
+        return res.status(404).json({ message: 'Route not found' })
+      }
+      console.error(err)
+      res.status(500).json({ message: 'Error processing photo for clue' })
+    }
+  }
+)
+
+// -----------------------------------------------------------------------------
+// Play flow: get checkpoint, submit answer, photo-for-clue
+// -----------------------------------------------------------------------------
+
 /**
  * GET /api/exploration/routes/:id/play/checkpoint/:order
- * Player flow: get clue, knowledge card, nearby recommendations, xp for checkpoint at sequence order.
- * Response shape: { nextCheckpointId, clue, knowledgeCard, nearbyRecommendations, xpAwarded }
+ * Player: get clue, knowledge card, nearby recommendations, xp for checkpoint.
+ * Response: { nextCheckpointId, nextSequenceOrder, clue, imageUrl, knowledgeCard, nearbyRecommendations, xpAwarded }
  */
 router.get(
   '/exploration/routes/:id/play/checkpoint/:order',

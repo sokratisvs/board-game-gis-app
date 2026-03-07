@@ -80,6 +80,7 @@ export default function RouteEditor() {
   const [routeDifficulty, setRouteDifficulty] = useState<RouteDifficulty>('medium')
   const [routeCity, setRouteCity] = useState('')
   const [routeWorld, setRouteWorld] = useState('')
+  const [routeCoverImageUrl, setRouteCoverImageUrl] = useState('')
   const [routeMetaDirty, setRouteMetaDirty] = useState(false)
   const [routeRecommendationIds, setRouteRecommendationIds] = useState<string[]>([])
 
@@ -92,9 +93,10 @@ export default function RouteEditor() {
       setRouteDifficulty((route.difficulty as RouteDifficulty) ?? 'medium')
       setRouteCity(route.city ?? '')
       setRouteWorld(route.world ?? '')
+      setRouteCoverImageUrl((route as { imageUrl?: string }).imageUrl ?? '')
       setRouteRecommendationIds(route.recommendations?.map((r) => r.id) ?? [])
     }
-  }, [route?.id, route?.type, route?.difficulty, route?.city, route?.world, route?.recommendations])
+  }, [route?.id, route?.type, route?.difficulty, route?.city, route?.world, route?.recommendations, (route as { imageUrl?: string })?.imageUrl])
 
   const handleUpdateRouteMeta = () => {
     if (!routeId || !route) return
@@ -105,6 +107,7 @@ export default function RouteEditor() {
         difficulty: routeDifficulty,
         city: routeType === 'real' ? routeCity.trim() || undefined : undefined,
         world: routeType === 'fantasy' ? routeWorld.trim() || undefined : undefined,
+        image_url: routeCoverImageUrl.trim() || null,
         recommendationIds: routeRecommendationIds,
       },
       { onSuccess: () => setRouteMetaDirty(false) }
@@ -635,6 +638,16 @@ export default function RouteEditor() {
                 />
               </div>
             )}
+            <div className="mb-2">
+              <label className={labelClass}>Route cover image URL</label>
+              <input
+                type="url"
+                value={routeCoverImageUrl}
+                onChange={(e) => { setRouteCoverImageUrl(e.target.value); setRouteMetaDirty(true) }}
+                placeholder="https://... (optional)"
+                className={inputClass}
+              />
+            </div>
             <div className="mb-2">
               <label className={labelClass}>Route recommendations (for mobile)</label>
               <div className="flex flex-wrap gap-2">

@@ -141,36 +141,50 @@ export default function ExplorationRoutes() {
     deleteRoute.mutate(deleteConfirmId, { onSettled: () => setDeleteConfirmId(null) })
   }
 
-  function parseOneBatch(parsed: Record<string, unknown>, fallbackName: string): { payload: CreateFromBatchPayload } | { error: string } {
+  /** Read imageUrl from a route or checkpoint object (accepts imageUrl or image_url). */
+  function readImageUrl(obj: Record<string, unknown>): string | undefined {
+    const v = obj.imageUrl ?? obj.image_url
+    if (v == null) return undefined
+    const s = String(v).trim()
+    return s || undefined
+  }
+
+  /** Parse one route object from batch JSON into CreateFromBatchPayload (name, imageUrl, checkpoints with coords/quiz/imageUrl). */
+  function parseOneBatch(parsed: Record<string, unknown>, fallbackName: string, index: number, total: number): { payload: CreateFromBatchPayload } | { error: string } {
     const nameFromJson = (parsed.name ?? parsed.title) as string | undefined
-    const name = (nameFromJson && String(nameFromJson).trim()) || fallbackName.trim()
-    if (!name) {
-      return { error: 'Route name required (set above or include "name"/"title" in JSON)' }
-    }
+    const name =
+      (nameFromJson && String(nameFromJson).trim()) ||
+      fallbackName.trim() ||
+      (total === 1 ? 'Imported route' : `Route ${index + 1}`)
     const checkpoints = parsed.checkpoints as CreateFromBatchPayload['checkpoints'] | undefined
     if (!Array.isArray(checkpoints) || checkpoints.length === 0) {
       return { error: 'JSON must include "checkpoints" array with at least one checkpoint' }
     }
+    const routeImageUrl = readImageUrl(parsed)
     const payload: CreateFromBatchPayload = {
       name,
       title: name,
       description: parsed.description != null ? String(parsed.description) : undefined,
+      imageUrl: routeImageUrl,
       type: (parsed.type === 'fantasy' ? 'fantasy' : 'real') as RouteType,
       city: parsed.city != null ? String(parsed.city) : undefined,
       world: parsed.world != null ? String(parsed.world) : undefined,
       radiusMeters: parsed.radiusMeters != null ? Number(parsed.radiusMeters) : undefined,
       estimatedDurationMin: parsed.estimatedDurationMin != null ? Number(parsed.estimatedDurationMin) : undefined,
       difficulty: (['easy', 'medium', 'hard'].includes(parsed.difficulty as string) ? parsed.difficulty : 'medium') as RouteDifficulty,
-      checkpoints: checkpoints.map((c) => ({
-        order: Number(c.order ?? 0),
-        coordinates: c.coordinates && typeof c.coordinates === 'object' ? { lat: Number(c.coordinates.lat), lng: Number(c.coordinates.lng) } : { lat: 0, lng: 0 },
-        validationRadiusMeters: c.validationRadiusMeters != null ? Number(c.validationRadiusMeters) : undefined,
-        quiz: c.quiz && typeof c.quiz === 'object' ? {
-          question: String(c.quiz.question ?? ''),
-          options: Array.isArray(c.quiz.options) ? c.quiz.options.map(String) : [],
-          correctAnswerIndex: Number(c.quiz.correctAnswerIndex ?? 0),
-        } : { question: '', options: [], correctAnswerIndex: 0 },
-      })),
+      checkpoints: checkpoints.map((c) => {
+        return {
+          order: Number(c.order ?? 0),
+          coordinates: c.coordinates && typeof c.coordinates === 'object' ? { lat: Number(c.coordinates.lat), lng: Number(c.coordinates.lng) } : { lat: 0, lng: 0 },
+          validationRadiusMeters: c.validationRadiusMeters != null ? Number(c.validationRadiusMeters) : undefined,
+          imageUrl: readImageUrl(c as Record<string, unknown>),
+          quiz: c.quiz && typeof c.quiz === 'object' ? {
+            question: String(c.quiz.question ?? ''),
+            options: Array.isArray(c.quiz.options) ? c.quiz.options.map(String) : [],
+            correctAnswerIndex: Number(c.quiz.correctAnswerIndex ?? 0),
+          } : { question: '', options: [], correctAnswerIndex: 0 },
+        }
+      }),
     }
     return { payload }
   }
@@ -187,7 +201,7 @@ export default function ExplorationRoutes() {
     const items: Record<string, unknown>[] = Array.isArray(parsed) ? parsed : [parsed as Record<string, unknown>]
     const payloads: CreateFromBatchPayload[] = []
     for (let i = 0; i < items.length; i++) {
-      const result = parseOneBatch(items[i], newName.trim() || (items.length === 1 ? '' : `Route ${i + 1}`))
+      const result = parseOneBatch(items[i], newName.trim(), i, items.length)
       if ('error' in result) {
         setBatchParseError(items.length > 1 ? `Route ${i + 1}: ${result.error}` : result.error)
         return
@@ -261,12 +275,12 @@ export default function ExplorationRoutes() {
 
               {createMode === 'batch' ? (
                 <>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Route name (if not in JSON)</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Route name (optional; used only when JSON has no "name"/"title")</label>
                   <input
                     type="text"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    placeholder="e.g. Athens Old Town"
+                    placeholder="e.g. Athens Old Town (or leave empty)"
                     className={inputClass + ' mb-3'}
                   />
                   <label className="block text-sm font-medium text-slate-700 mb-1">Paste route JSON (one object or an array of route objects)</label>
