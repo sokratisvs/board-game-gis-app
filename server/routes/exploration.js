@@ -126,6 +126,9 @@ function mapRouteRow(row) {
     out.firstCheckpointLat = parseFloat(row.first_cp_lat)
     out.firstCheckpointLng = parseFloat(row.first_cp_lng)
   }
+  if (row.first_cp_image_url != null) {
+    out.imageUrl = row.first_cp_image_url
+  }
   return out
 }
 
@@ -167,11 +170,11 @@ router.get('/exploration/routes', async (req, res) => {
   try {
     let query = `SELECT er.id, er.name, er.description, er.created_by, er.is_public, er.created_at, er.updated_at,
               r.type, r.difficulty, r.city, r.world, r.estimated_duration_min, r.radius_meters, r.is_active, r.title,
-              first_cp.lat AS first_cp_lat, first_cp.lng AS first_cp_lng
+              first_cp.lat AS first_cp_lat, first_cp.lng AS first_cp_lng, first_cp.image_url AS first_cp_image_url
        FROM exploration_routes er
        LEFT JOIN routes r ON er.route_id = r.id
        LEFT JOIN LATERAL (
-         SELECT c.lat, c.lng FROM route_checkpoints c
+         SELECT c.lat, c.lng, c.image_url FROM route_checkpoints c
          WHERE c.route_id = er.id ORDER BY c.sequence_order LIMIT 1
        ) first_cp ON true
        WHERE (er.is_public = true OR $1 = true)`
@@ -227,6 +230,64 @@ router.get('/exploration/routes', async (req, res) => {
     }
     console.error(err)
     res.status(500).json({ message: 'Error listing routes' })
+  }
+})
+
+/**
+ * GET /api/exploration/nearby-clues?lat=&lng=&radius=
+ * Returns checkpoints (clues) within the given radius (meters) of the user position. For mobile "clues near you" list.
+ * Auth: Optional.
+ */
+router.get('/exploration/nearby-clues', async (req, res) => {
+  const pool = req.app.get('pool')
+  const lat = parseFloat(req.query.lat)
+  const lng = parseFloat(req.query.lng)
+  const radiusM = parseInt(req.query.radius, 10) || 1000
+  if (Number.isNaN(lat) || Number.isNaN(lng)) {
+    return res.status(400).json({ message: 'Query parameters lat and lng are required and must be numbers' })
+  }
+  if (radiusM < 100 || radiusM > 50000) {
+    return res.status(400).json({ message: 'radius must be between 100 and 50000 (meters)' })
+  }
+  try {
+    const result = await pool.query(
+      `SELECT c.id AS checkpoint_id, c.route_id, c.sequence_order, c.clue_text, c.image_url, c.lat, c.lng, c.xp_awarded,
+              er.name AS route_name,
+              ( 6371000 * 2 * asin(sqrt(
+                  sin(radians(c.lat - $1) / 2) * sin(radians(c.lat - $1) / 2) +
+                  cos(radians($1)) * cos(radians(c.lat)) *
+                  sin(radians(c.lng - $2) / 2) * sin(radians(c.lng - $2) / 2)
+                )) )::int AS distance_meters
+       FROM route_checkpoints c
+       JOIN exploration_routes er ON er.id = c.route_id
+       LEFT JOIN routes r ON r.id = er.route_id
+       WHERE er.is_public = true
+         AND ( 6371000 * 2 * asin(sqrt(
+                sin(radians(c.lat - $1) / 2) * sin(radians(c.lat - $1) / 2) +
+                cos(radians($1)) * cos(radians(c.lat)) *
+                sin(radians(c.lng - $2) / 2) * sin(radians(c.lng - $2) / 2)
+              )) ) <= $3
+       ORDER BY distance_meters ASC
+       LIMIT 100`,
+      [lat, lng, radiusM]
+    )
+    const clues = result.rows.map((row) => ({
+      checkpointId: row.checkpoint_id,
+      routeId: row.route_id,
+      routeName: row.route_name,
+      clueText: row.clue_text,
+      imageUrl: row.image_url || null,
+      lat: parseFloat(row.lat),
+      lng: parseFloat(row.lng),
+      sequenceOrder: row.sequence_order,
+      xpAwarded: row.xp_awarded ?? 0,
+      distanceMeters: row.distance_meters ?? 0,
+    }))
+    res.json({ clues })
+  } catch (err) {
+    if (err.code === '42P01') return res.json({ clues: [] })
+    console.error(err)
+    res.status(500).json({ message: 'Error fetching nearby clues' })
   }
 })
 
@@ -714,24 +775,11 @@ router.get('/exploration/routes/:id', async (req, res) => {
        ORDER BY sequence_order`,
       [id]
     )
-    const checkpoints = checkpointsResult.rows.map((row) => {
-      const out = {
-        id: row.id,
-        routeId: row.route_id,
-        sequenceOrder: row.sequence_order,
-        lat: parseFloat(row.lat),
-        lng: parseFloat(row.lng),
-        clueText: row.clue_text,
-        imageUrl: row.image_url,
-        knowledgeCard: row.knowledge_card || null,
-        xpAwarded: row.xp_awarded ?? 0,
-        createdAt: row.created_at,
-      }
-      const quiz = mapRowToQuiz(row)
-      if (quiz) out.quiz = quiz
-      return out
-    })
+    const checkpoints = checkpointsResult.rows.map((row) => mapCheckpointRow(row))
     const totalXp = checkpoints.reduce((sum, c) => sum + (c.xpAwarded ?? 0), 0)
+    if (checkpoints.length > 0 && checkpoints[0].imageUrl != null) {
+      route.imageUrl = checkpoints[0].imageUrl
+    }
     const recResult = await pool.query(
       `SELECT r.id, r.type, r.name, r.external_id, r.lat, r.lng, r.description, r.created_at
        FROM route_recommendations rr
