@@ -188,6 +188,10 @@ app.use(async (req, res, next) => {
   next()
 })
 
+// Avatar uploads (POST /api/profile/avatar stores under server/uploads/avatars)
+const uploadsPath = path.join(__dirname, 'uploads')
+app.use('/api/uploads', express.static(uploadsPath))
+
 // Health check (for Docker / Jenkins / monitoring)
 app.get('/health', async (_, res) => {
   try {

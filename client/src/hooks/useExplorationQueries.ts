@@ -75,6 +75,7 @@ export type PlayCheckpointResponse = {
   nextCheckpointId: string | null
   nextSequenceOrder: number | null
   clue: string
+  imageUrl: string | null
   knowledgeCard: { title?: string; description?: string; funFact?: string } | null
   nearbyRecommendations: Array<{ type: string; id: string }>
   xpAwarded: number
@@ -94,6 +95,7 @@ const keys = {
   route: (id: string) => [...keys.all, 'route', id] as const,
   checkpoints: (routeId: string) => [...keys.all, 'checkpoints', routeId] as const,
   recommendations: () => [...keys.all, 'recommendations'] as const,
+  completedCheckpoints: (routeId?: string) => [...keys.all, 'completedCheckpoints', routeId ?? 'all'] as const,
 }
 
 export type RouteTypeFilter = 'all' | 'real' | 'fantasy'
@@ -124,6 +126,55 @@ async function fetchRecommendations(type?: string): Promise<Recommendation[]> {
   const url = type ? `/exploration/recommendations?type=${encodeURIComponent(type)}` : '/exploration/recommendations'
   const { data } = await api.get<Recommendation[]>(url)
   return Array.isArray(data) ? data : []
+}
+
+async function fetchCompletedCheckpoints(routeId?: string): Promise<string[]> {
+  const url = routeId
+    ? `/exploration/users/me/completed-checkpoints?routeId=${encodeURIComponent(routeId)}`
+    : '/exploration/users/me/completed-checkpoints'
+  const { data } = await api.get<{ completedCheckpointIds: string[] }>(url)
+  return data?.completedCheckpointIds ?? []
+}
+
+export function useCompletedCheckpoints(routeId?: string | null) {
+  return useQuery({
+    queryKey: keys.completedCheckpoints(routeId ?? undefined),
+    queryFn: () => fetchCompletedCheckpoints(routeId ?? undefined),
+    enabled: true,
+  })
+}
+
+export function useCompleteCheckpoint(routeId: string | null, checkpointId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      await api.post(
+        `/exploration/routes/${routeId}/checkpoints/${checkpointId}/complete`
+      )
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: keys.completedCheckpoints() })
+      if (routeId) qc.invalidateQueries({ queryKey: keys.completedCheckpoints(routeId) })
+    },
+  })
+}
+
+export type ScanCluePayload = { routeId: string; checkpointId: string; imageBase64: string }
+
+export function useScanClue() {
+  return useMutation({
+    mutationFn: async ({
+      routeId,
+      checkpointId,
+      imageBase64,
+    }: ScanCluePayload): Promise<{ clue: string }> => {
+      const { data } = await api.post<{ clue: string }>(
+        `/exploration/routes/${routeId}/checkpoints/${checkpointId}/scan-clue`,
+        { imageBase64 }
+      )
+      return data
+    },
+  })
 }
 
 export function useExplorationRoutes(

@@ -66,6 +66,7 @@ export default function RouteEditor() {
   const [correctAnswerIndex, setCorrectAnswerIndex] = useState(0)
   const [manualLat, setManualLat] = useState('')
   const [manualLng, setManualLng] = useState('')
+  const [editLatLng, setEditLatLng] = useState<{ lat: number; lng: number } | null>(null)
 
   const { data: route, isLoading: routeLoading, error: routeError } = useRouteDetail(routeId ?? null)
   const { data: recommendations = [] } = useRecommendations()
@@ -116,19 +117,24 @@ export default function RouteEditor() {
   }
 
   const handleMapClick = useCallback((lat: number, lng: number) => {
+    if (editingCheckpoint) {
+      setEditLatLng({ lat, lng })
+      return
+    }
     if (!addingCheckpoint) return
     setPendingLatLng({ lat, lng })
     setQuizQuestion('')
     setQuizOptions(['', '', '', ''])
     setCorrectAnswerIndex(0)
     setXpAwardedInput('')
-  }, [addingCheckpoint])
+  }, [addingCheckpoint, editingCheckpoint])
 
   const openEdit = useCallback((cp: RouteCheckpoint) => {
     setAddingCheckpoint(false)
     setPendingLatLng(null)
     setManualLat('')
     setManualLng('')
+    setEditLatLng({ lat: cp.lat, lng: cp.lng })
     setEditingCheckpoint(cp)
     setClueText(cp.clueText)
     setImageUrl(cp.imageUrl || '')
@@ -187,11 +193,13 @@ export default function RouteEditor() {
   }
 
   const saveEditCheckpoint = () => {
-    if (!editingCheckpoint || !routeId) return
+    if (!editingCheckpoint || !routeId || !editLatLng) return
     const options = quizOptions.map((o) => o.trim())
     const hasQuiz = quizQuestion.trim() && options.some(Boolean)
     updateCheckpoint.mutate(
       {
+        lat: editLatLng.lat,
+        lng: editLatLng.lng,
         clueText: clueText.trim() || editingCheckpoint.clueText,
         imageUrl: imageUrl.trim() || null,
         knowledgeCard:
@@ -350,15 +358,32 @@ export default function RouteEditor() {
               scrollWheelZoom
             >
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              <MapClickCapture onMapClick={handleMapClick} enabled={!!addingCheckpoint && !pendingLatLng} />
-              {checkpoints.map((cp) => (
-                <Marker
-                  key={cp.id}
-                  position={[cp.lat, cp.lng]}
-                  icon={checkpointIcon}
-                  eventHandlers={{ click: () => openEdit(cp) }}
-                />
-              ))}
+              <MapClickCapture
+                onMapClick={handleMapClick}
+                enabled={(!!addingCheckpoint && !pendingLatLng) || !!editingCheckpoint}
+              />
+              {checkpoints.map((cp) => {
+                const isEditing = editingCheckpoint?.id === cp.id
+                const position = isEditing && editLatLng ? [editLatLng.lat, editLatLng.lng] : [cp.lat, cp.lng]
+                return (
+                  <Marker
+                    key={cp.id}
+                    position={position as [number, number]}
+                    icon={checkpointIcon}
+                    draggable={isEditing}
+                    eventHandlers={
+                      isEditing
+                        ? {
+                            dragend: (e: { target: { getLatLng: () => { lat: number; lng: number } } }) => {
+                              const ll = e.target.getLatLng()
+                              setEditLatLng({ lat: ll.lat, lng: ll.lng })
+                            },
+                          }
+                        : { click: () => openEdit(cp) }
+                    }
+                  />
+                )
+              })}
               {pendingLatLng && (
                 <Marker position={[pendingLatLng.lat, pendingLatLng.lng]} icon={checkpointIcon} />
               )}
@@ -369,6 +394,35 @@ export default function RouteEditor() {
         <div className="w-full lg:w-96 space-y-4">
           {(pendingLatLng || editingCheckpoint) && (
             <Section title={editingCheckpoint ? 'Edit checkpoint' : `New checkpoint #${nextOrder + 1}`}>
+              {editingCheckpoint && editLatLng && (
+                <>
+                  <label className={labelClass}>Coordinates (or drag pin on map / click map)</label>
+                  <div className="flex gap-2 mb-2">
+                    <input
+                      type="number"
+                      step="any"
+                      placeholder="Lat"
+                      value={editLatLng.lat}
+                      onChange={(e) => {
+                        const v = parseFloat(e.target.value)
+                        if (!Number.isNaN(v)) setEditLatLng((prev) => (prev ? { ...prev, lat: v } : null))
+                      }}
+                      className={inputClass + ' flex-1'}
+                    />
+                    <input
+                      type="number"
+                      step="any"
+                      placeholder="Lng"
+                      value={editLatLng.lng}
+                      onChange={(e) => {
+                        const v = parseFloat(e.target.value)
+                        if (!Number.isNaN(v)) setEditLatLng((prev) => (prev ? { ...prev, lng: v } : null))
+                      }}
+                      className={inputClass + ' flex-1'}
+                    />
+                  </div>
+                </>
+              )}
               <label className={labelClass}>Clue text</label>
               <textarea
                 value={clueText}
@@ -515,7 +569,14 @@ export default function RouteEditor() {
                     >
                       Remove checkpoint
                     </button>
-                    <button type="button" onClick={() => setEditingCheckpoint(null)} className={btnSecondary}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingCheckpoint(null)
+                        setEditLatLng(null)
+                      }}
+                      className={btnSecondary}
+                    >
                       Close
                     </button>
                   </>

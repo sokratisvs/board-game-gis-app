@@ -129,7 +129,7 @@ function mapRouteRow(row) {
   return out
 }
 
-/** Map checkpoint row to API shape (id, routeId, sequenceOrder, lat, lng, clueText, ..., quiz?). */
+/** Map checkpoint row to API shape. knowledgeCard includes quiz (question, answers, correctAnswerIndex) per contract. */
 function mapCheckpointRow(row) {
   const out = {
     id: row.id,
@@ -139,7 +139,7 @@ function mapCheckpointRow(row) {
     lng: parseFloat(row.lng),
     clueText: row.clue_text,
     imageUrl: row.image_url,
-    knowledgeCard: row.knowledge_card || null,
+    knowledgeCard: buildRouteKnowledgeCard(row),
     xpAwarded: row.xp_awarded ?? 0,
     createdAt: row.created_at,
   }
@@ -154,7 +154,7 @@ function mapCheckpointRow(row) {
  * Query: ?type=all|real|fantasy to filter by route type. ?includeCheckpoints=1 to include checkpoints (for map pins).
  * Includes firstCheckpointLat, firstCheckpointLng for map display.
  */
-router.get('/exploration/routes', requireAuth, async (req, res) => {
+router.get('/exploration/routes', async (req, res) => {
   const pool = req.app.get('pool')
   const isAdmin = req.session?.user?.type === 'admin'
   const typeFilter =
@@ -227,6 +227,57 @@ router.get('/exploration/routes', requireAuth, async (req, res) => {
     }
     console.error(err)
     res.status(500).json({ message: 'Error listing routes' })
+  }
+})
+
+/**
+ * GET /api/exploration/quiz?clue=<clue>
+ * Quiz by checkpoint clue. Contract: RoutePlayCheckpointResult (clue, knowledgeCard with question/answers/correctAnswerIndex, nearbyRecommendations, xpAwarded, nextCheckpointId, nextSequenceOrder).
+ * Auth: Required.
+ */
+router.get('/exploration/quiz', requireAuth, async (req, res) => {
+  const pool = req.app.get('pool')
+  const clue = req.query.clue
+  if (!clue || typeof clue !== 'string' || !clue.trim()) {
+    return res.status(400).json({ message: 'Missing or empty query parameter: clue' })
+  }
+  const normalized = clue.trim()
+  try {
+    const cpResult = await pool.query(
+      `SELECT c.id, c.route_id, c.sequence_order, c.clue_text, c.image_url, c.knowledge_card, c.xp_awarded, c.quiz_question, c.quiz_options,
+              (SELECT json_agg(json_build_object('type', r.type, 'id', r.external_id))
+               FROM route_checkpoint_recommendations cpr
+               JOIN recommendations r ON r.id = cpr.recommendation_id
+               WHERE cpr.checkpoint_id = c.id) AS nearby_recommendations
+       FROM route_checkpoints c
+       WHERE TRIM(c.clue_text) = $1
+       LIMIT 1`,
+      [normalized]
+    )
+    if (cpResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Checkpoint not found for this clue' })
+    }
+    const c = cpResult.rows[0]
+    const routeId = c.route_id
+    const seq = c.sequence_order
+    const nextResult = await pool.query(
+      'SELECT id, sequence_order FROM route_checkpoints WHERE route_id = $1 AND sequence_order = $2',
+      [routeId, seq + 1]
+    )
+    const nextRow = nextResult.rows[0] || null
+    res.json({
+      nextCheckpointId: nextRow?.id ?? null,
+      nextSequenceOrder: nextRow != null ? nextRow.sequence_order : null,
+      clue: c.clue_text,
+      imageUrl: c.image_url || null,
+      knowledgeCard: buildRouteKnowledgeCard(c),
+      nearbyRecommendations: c.nearby_recommendations || [],
+      xpAwarded: c.xp_awarded ?? 0,
+    })
+  } catch (err) {
+    if (err.code === '42P01') return res.status(404).json({ message: 'Route or checkpoint not found' })
+    console.error(err)
+    res.status(500).json({ message: 'Error fetching quiz by clue' })
   }
 })
 
@@ -640,7 +691,7 @@ router.post(
  * GET /api/exploration/routes/:id
  * Get route with checkpoints (ordered).
  */
-router.get('/exploration/routes/:id', requireAuth, async (req, res) => {
+router.get('/exploration/routes/:id', async (req, res) => {
   const pool = req.app.get('pool')
   const { id } = req.params
   try {
@@ -926,6 +977,23 @@ function mapRowToQuiz(row) {
     options: options.length ? options : [],
     correctAnswerIndex: correctIndex >= 0 ? correctIndex : 0,
   }
+}
+
+/**
+ * Build RouteKnowledgeCard for API: merge knowledge_card JSON with quiz (question, answers, correctAnswerIndex).
+ */
+function buildRouteKnowledgeCard(row) {
+  const base =
+    row.knowledge_card && typeof row.knowledge_card === 'object'
+      ? { ...row.knowledge_card }
+      : {}
+  const quiz = mapRowToQuiz(row)
+  if (quiz) {
+    base.question = quiz.question
+    base.answers = quiz.options
+    base.correctAnswerIndex = quiz.correctAnswerIndex
+  }
+  return Object.keys(base).length ? base : null
 }
 
 /** Build quiz_options JSON from API { question, options, correctAnswerIndex }. */
@@ -1242,7 +1310,7 @@ router.get(
     }
     try {
       const cpResult = await pool.query(
-        `SELECT c.id, c.sequence_order, c.clue_text, c.image_url, c.knowledge_card, c.xp_awarded,
+        `SELECT c.id, c.sequence_order, c.clue_text, c.image_url, c.knowledge_card, c.xp_awarded, c.quiz_question, c.quiz_options,
               (SELECT json_agg(json_build_object('type', r.type, 'id', r.external_id))
                FROM route_checkpoint_recommendations cpr
                JOIN recommendations r ON r.id = cpr.recommendation_id
@@ -1264,7 +1332,8 @@ router.get(
         nextCheckpointId: nextRow?.id ?? null,
         nextSequenceOrder: nextRow ? seq + 1 : null,
         clue: c.clue_text,
-        knowledgeCard: c.knowledge_card || null,
+        imageUrl: c.image_url || null,
+        knowledgeCard: buildRouteKnowledgeCard(c),
         nearbyRecommendations: c.nearby_recommendations || [],
         xpAwarded: c.xp_awarded ?? 0,
       })
@@ -1273,6 +1342,216 @@ router.get(
         return res.status(404).json({ message: 'Route not found' })
       console.error(err)
       res.status(500).json({ message: 'Error fetching checkpoint' })
+    }
+  }
+)
+
+/**
+ * POST /api/exploration/routes/:routeId/play/checkpoint/:order/answer
+ * Contract: body { selectedAnswerIndex: number }. Returns { correct, xpAwarded, message? }.
+ */
+router.post(
+  '/exploration/routes/:id/play/checkpoint/:order/answer',
+  requireAuth,
+  async (req, res) => {
+    const pool = req.app.get('pool')
+    const userId = req.session?.user?.id
+    const { id: routeId, order } = req.params
+    const { selectedAnswerIndex } = req.body || {}
+    if (!userId) {
+      return res.status(401).json({ message: 'Not authenticated' })
+    }
+    const seq = parseInt(order, 10)
+    if (Number.isNaN(seq) || seq < 0) {
+      return res.status(400).json({ message: 'Invalid sequence order' })
+    }
+    const selected = typeof selectedAnswerIndex === 'number' ? selectedAnswerIndex : parseInt(selectedAnswerIndex, 10)
+    if (Number.isNaN(selected) || selected < 0) {
+      return res.status(400).json({ message: 'Invalid selectedAnswerIndex' })
+    }
+    try {
+      const cpResult = await pool.query(
+        'SELECT id, xp_awarded, quiz_question, quiz_options FROM route_checkpoints WHERE route_id = $1 AND sequence_order = $2',
+        [routeId, seq]
+      )
+      if (cpResult.rows.length === 0) {
+        return res.status(404).json({ message: 'Checkpoint not found' })
+      }
+      const c = cpResult.rows[0]
+      const quiz = mapRowToQuiz(c)
+      const correctIndex = quiz ? quiz.correctAnswerIndex : 0
+      const correct = selected === correctIndex
+      const xpAwarded = correct ? (c.xp_awarded ?? 0) : 0
+      if (correct) {
+        await pool.query(
+          `INSERT INTO user_route_checkpoint_completions (user_id, checkpoint_id)
+           VALUES ($1, $2)
+           ON CONFLICT (user_id, checkpoint_id) DO NOTHING`,
+          [userId, c.id]
+        )
+      }
+      res.status(200).json({
+        correct,
+        xpAwarded,
+        ...(correct && { message: 'Correct!' }),
+      })
+    } catch (err) {
+      if (err.code === '42P01') return res.status(404).json({ message: 'Checkpoint not found' })
+      console.error(err)
+      res.status(500).json({ message: 'Error submitting answer' })
+    }
+  }
+)
+
+/**
+ * GET /api/exploration/users/me/completed-checkpoints
+ * Returns checkpoint IDs the current user has completed (solved). Query: ?routeId= to filter by route.
+ */
+router.get('/exploration/users/me/completed-checkpoints', requireAuth, async (req, res) => {
+  const pool = req.app.get('pool')
+  const userId = req.session?.user?.id
+  const routeId = req.query.routeId
+  if (!userId) {
+    return res.status(401).json({ message: 'Not authenticated' })
+  }
+  try {
+    let result
+    if (routeId) {
+      result = await pool.query(
+        `SELECT c.checkpoint_id
+         FROM user_route_checkpoint_completions c
+         JOIN route_checkpoints rcp ON rcp.id = c.checkpoint_id
+         WHERE c.user_id = $1 AND rcp.route_id = $2`,
+        [userId, routeId]
+      )
+    } else {
+      result = await pool.query(
+        'SELECT checkpoint_id FROM user_route_checkpoint_completions WHERE user_id = $1',
+        [userId]
+      )
+    }
+    const completedCheckpointIds = result.rows.map((r) => r.checkpoint_id)
+    res.json({ completedCheckpointIds })
+  } catch (err) {
+    if (err.code === '42P01') return res.json({ completedCheckpointIds: [] })
+    console.error(err)
+    res.status(500).json({ message: 'Error fetching completed checkpoints' })
+  }
+})
+
+/**
+ * POST /api/exploration/routes/:routeId/checkpoints/:checkpointId/complete
+ * Mark checkpoint as completed (solved) for the current user. Call after user answers correctly.
+ */
+router.post(
+  '/exploration/routes/:routeId/checkpoints/:checkpointId/complete',
+  requireAuth,
+  async (req, res) => {
+    const pool = req.app.get('pool')
+    const userId = req.session?.user?.id
+    const { routeId, checkpointId } = req.params
+    if (!userId) {
+      return res.status(401).json({ message: 'Not authenticated' })
+    }
+    try {
+      const check = await pool.query(
+        'SELECT id FROM route_checkpoints WHERE id = $1 AND route_id = $2',
+        [checkpointId, routeId]
+      )
+      if (check.rows.length === 0) {
+        return res.status(404).json({ message: 'Checkpoint not found' })
+      }
+      await pool.query(
+        `INSERT INTO user_route_checkpoint_completions (user_id, checkpoint_id)
+         VALUES ($1, $2)
+         ON CONFLICT (user_id, checkpoint_id) DO NOTHING`,
+        [userId, checkpointId]
+      )
+      res.status(204).send()
+    } catch (err) {
+      console.error(err)
+      res.status(500).json({ message: 'Error completing checkpoint' })
+    }
+  }
+)
+
+/**
+ * POST /api/exploration/routes/:routeId/checkpoints/:checkpointId/scan-clue
+ * User scans with camera; server uses vision AI to return a short clue for the quiz answer.
+ * Body: { imageBase64: string } (raw base64 or data URL e.g. "data:image/jpeg;base64,...").
+ * Response: { clue: string }.
+ */
+router.post(
+  '/exploration/routes/:routeId/checkpoints/:checkpointId/scan-clue',
+  requireAuth,
+  async (req, res) => {
+    const pool = req.app.get('pool')
+    const { routeId, checkpointId } = req.params
+    const { imageBase64 } = req.body || {}
+    if (!imageBase64 || typeof imageBase64 !== 'string') {
+      return res.status(400).json({ message: 'Missing imageBase64 in body' })
+    }
+    if (!OPENAI_API_KEY) {
+      return res.status(503).json({ message: 'Scan-for-clue not available; set OPENAI_API_KEY' })
+    }
+    try {
+      const cpResult = await pool.query(
+        'SELECT quiz_question, quiz_options FROM route_checkpoints WHERE id = $1 AND route_id = $2',
+        [checkpointId, routeId]
+      )
+      if (cpResult.rows.length === 0) {
+        return res.status(404).json({ message: 'Checkpoint not found' })
+      }
+      const row = cpResult.rows[0]
+      const question = row.quiz_question || ''
+      const options = Array.isArray(row.quiz_options) ? row.quiz_options : []
+      const optionsText = options.length ? options.map((o, i) => `${String.fromCharCode(65 + i)}. ${o}`).join('\n') : ''
+
+      let imageUrl = imageBase64.trim()
+      if (!imageUrl.startsWith('data:')) {
+        imageUrl = `data:image/jpeg;base64,${imageUrl}`
+      }
+
+      const prompt = `The user is at a location and has opened a quiz. They took a photo with their camera to get a hint.
+
+Quiz question: ${question}
+Answer options:
+${optionsText || '(none)'}
+
+Based only on what you see in the image, give a short clue (1–2 sentences) that helps them choose the correct answer. Do NOT say which option is correct. Be suggestive and refer to what is visible (e.g. text, object, building).`
+
+      const visionRes = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          max_tokens: 150,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: prompt },
+                { type: 'image_url', image_url: { url: imageUrl } },
+              ],
+            },
+          ],
+        }),
+      })
+      const visionData = await visionRes.json()
+      const clue = visionData?.choices?.[0]?.message?.content?.trim()
+      if (!clue) {
+        throw new Error(visionData?.error?.message || 'No clue from vision')
+      }
+      res.json({ clue })
+    } catch (err) {
+      console.error('scan-clue error', err)
+      if (err.message && err.message.includes('not available')) {
+        return res.status(503).json({ message: err.message })
+      }
+      res.status(500).json({ message: 'Failed to get clue from image' })
     }
   }
 )
